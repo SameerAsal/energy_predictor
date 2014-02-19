@@ -1,6 +1,13 @@
+Feb 15th: 
+---------
 * Move the PAPI interface code, make sure it compiles. 
 * Move the polybenche examples
 * Add both to github. 
 * Add an image to pluto.
 
+
+Moved everything and got it to compile.
+
+Feb 16th: 
+---------
 

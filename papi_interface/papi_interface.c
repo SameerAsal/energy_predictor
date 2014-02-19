@@ -1,3 +1,4 @@
+#include <string.h>
 #include "papi_interface.h"
 
 // http://icl.cs.utk.edu/projects/papi/wiki/PAPIC:High_Level#High_Level_Code_Example
@@ -22,11 +23,11 @@ void stop_counting() {
 }
 
 void start_counters() {
-  CHECK (PAPI_start_counters(Events, num_events), "Error in  start_counters");
+  CHECK (PAPI_start_counters(cpu_events, cpu_num_events), "Error in  start_counters");
 }
 
 void stop_counters() {
-  CHECK (PAPI_stop_counters(Values, num_events), "Stop Counters failed !");
+  CHECK (PAPI_stop_counters(cpu_values, cpu_num_events), "Stop Counters failed !");
 }
 
 int  get_num_events() {
@@ -40,7 +41,7 @@ int  get_num_events() {
 // Reads the current values from the CPU register counters and 
 // resets the values in theese registers. 
 void accumlate_counters() {
-  if(PAPI_accum_counters(Values, num_events) != PAPI_OK)
+  if(PAPI_accum_counters(cpu_values, cpu_num_events) != PAPI_OK)
     handle_error(1);
 }
 
@@ -49,7 +50,7 @@ void accumlate_counters() {
 void read_counters() {
   end_usec = PAPI_get_real_usec();
   total_usec = end_usec - start_usec;
-  int retval = PAPI_read_counters(Values, num_events);
+  int retval = PAPI_read_counters(cpu_values, cpu_num_events);
   if (retval != PAPI_OK) {
     handle_error(retval);
   }
@@ -63,9 +64,9 @@ void  print_counters_to_file(char* file_name) {
     exit(-1);
   } 
   char event_name[PAPI_MAX_STR_LEN];
-  for (idx=0; idx < num_events; idx++) {
-    PAPI_event_code_to_name(Events[idx], event_name);
-    fprintf(out_file,"%s:\t%lld\n", event_name, Values[idx]);
+  for (idx=0; idx < cpu_num_events; idx++) {
+    PAPI_event_code_to_name(cpu_events[idx], event_name);
+    fprintf(out_file,"%s:\t%lld\n", event_name, cpu_values[idx]);
   }
   fprintf(out_file,"%s:\t%f\n", "EXEC_TIME", total_usec/1000.0);
   fclose(out_file);
@@ -75,9 +76,9 @@ void print_counters() {
   int idx=0;
   char event_name[PAPI_MAX_STR_LEN];
   printf("Values of performance counters: \n");
-  for (idx=0; idx < num_events; idx++) {
-    PAPI_event_code_to_name(Events[idx], event_name);
-    printf("%s :\t%lld\n", event_name, Values[idx]);
+  for (idx=0; idx < cpu_num_events; idx++) {
+    PAPI_event_code_to_name(cpu_events[idx], event_name);
+    printf("%s :\t%lld\n", event_name, cpu_values[idx]);
   } 
   printf("%s:\t%f\n", "EXEC_TIME", total_usec/1000.0);
 }
@@ -90,6 +91,13 @@ void handle_error (int retval) {
 
 void CHECK (int retval, char* error_message) {
   if (retval != PAPI_OK) { 
+    fprintf(stderr,"%s  %d: %s\n", error_message, retval, PAPI_strerror(retval));
+    exit(1);
+  }
+}
+
+void CHECK_BOOL (int retval, char* error_message) {
+  if (retval != TRUE) { 
     fprintf(stderr,"%s  %d: %s\n", error_message, retval, PAPI_strerror(retval));
     exit(1);
   }
@@ -119,6 +127,8 @@ void show_all_events() {
   } while (PAPI_enum_event(&EventCode, 0) == PAPI_OK);
 }
 
+// Adds event to a list of events. 
+// Can be used with both RAPL and CPU events. 
 void add_event(int * events, int papi_event_code, int* idx) {
   char event_name[PAPI_MAX_STR_LEN];
   int retval;
@@ -139,51 +149,26 @@ void add_event(int * events, int papi_event_code, int* idx) {
   }
 }
 
-void register_events() {
-  // add_event(Events,PAPI_VEC_SP, &num_events);
-  // add_event(Events,PAPI_DP_OPS, &num_events); 
+// void register_events() {
+  // add_event(cpu_events,PAPI_VEC_SP, &cpu_num_events);
+  // add_event(cpu_events,PAPI_DP_OPS, &cpu_num_events); 
   // counts all the double precision operations. 
-  add_event(Events,PAPI_VEC_DP, &num_events);
-  add_event(Events,PAPI_L1_DCM, &num_events);
-  zero_fill();
-}
+//  add_event(cpu_events,PAPI_VEC_DP, &cpu_num_events);
+//  add_event(cpu_events,PAPI_L1_DCM, &cpu_num_events);
+//  zero_fill_values();
+//}
 
 void finalize() {
-  free(Events);
-  free(Values);
-  num_events = 0;
+  free(cpu_events);
+  free(cpu_values);
+  cpu_num_events = 0;
 }
 
-void test_papi() {
-  // TODO: Make this into a test case to check for correctness when 
-  //   trying it on new architectures.
-  init_counters();
-  //start_papi();
-  start_counting();
-  int i = 90; 
-  double vvv = 9.7;
-  double* arr = (double*)(malloc(sizeof(double)*1000));
-  for (i = 90; i < 999 ; i++) {
-    if (i < 90)
-      printf("i = %i\n", i);
-    if (i==999)
-      break;
-    vvv *= i*0.54;
-    arr[i] = vvv;
-  }
-  printf("i = %i , vv = %f \n", i, vvv);
-  stop_counting();
-  //stop_papi();
-  print_counters();  
-  print_counters_to_file("native.txt");
-  finalize_native();
-  finalize();
-}
   
-void zero_fill() {
+void zero_fill_values() {
   int idx_;
-  for (idx_=0; idx_ < num_events; idx_++) {
-    Values[idx_] = 0;
+  for (idx_=0; idx_ < cpu_num_events; idx_++) {
+    cpu_values[idx_] = 0;
   }
 }
  
@@ -195,32 +180,35 @@ void init_library() {
   }
 }
 
-void init_counters() {
-  printf ("Start init_counters\n");
-  int max_num_events = get_num_events();
+void init_cpu_counters() {
+  printf ("Start init_cpu_counters\n");
+  int max_cpu_num_events = get_num_events();
   // Allocate memory for events.
-  Events = malloc(sizeof(int)*max_num_events);
-  Values = malloc(sizeof(long_long)*max_num_events);
+  cpu_events = malloc(sizeof(int)*max_cpu_num_events);
+  cpu_values = malloc(sizeof(long_long)*max_cpu_num_events);
 
   init_library();
   create_event_set();
   // Bind our EventSet to the cpu component
   // Look at the Multiplexing example in the ctests folder.
-  CHECK (PAPI_assign_eventset_component(native_event_set, 0), "assign_event_set_component to 0 (cpu)");
+  CHECK (PAPI_assign_eventset_component(cpu_native_event_set, 0), "assign_event_set_component to 0 (cpu)");
   // Enable and initialize multiplex support
   CHECK (PAPI_multiplex_init(), "Error Initialzing multiplexing !");
-  CHECK (PAPI_set_multiplex(native_event_set), "PAPI_set_multiplex(native_event_set)");
+  // To enable multiplexing we need to specify what componenet of PAPI we are exactly using. 
+  // we don't need to do that with if multiplexing was not needed.
+  CHECK (PAPI_set_multiplex(cpu_native_event_set), "PAPI_set_multiplex(native_event_set)");
   register_flop_events();
   register_mem_events();
   fill_event_set();
-  zero_fill();
-  printf ("Done init_counters\n");
+  zero_fill_values();
+  printf ("Done init_cpu_counters\n");
 }
+
 
 void create_event_set() {
   // Create the event set. 
-  native_event_set = PAPI_NULL;
-  CHECK (PAPI_create_eventset(&native_event_set), "PAPI_create_event_set failed !");
+  cpu_native_event_set = PAPI_NULL;
+  CHECK (PAPI_create_eventset(&cpu_native_event_set), "PAPI_create_event_set failed !");
 }
 
 void register_flop_events() {
@@ -231,68 +219,72 @@ void register_flop_events() {
   // Avx. 
   // CHECK(PAPI_event_name_to_code("SIMD_FP_256:PACKED_SINGLE", &native), "Error translating event name to code\n");
   // print_event_info(native);
-  // add_event(Events, native, &num_events);
+  // add_event(cpu_events, native, &cpu_num_events);
 
   CHECK(PAPI_event_name_to_code("SIMD_FP_256:PACKED_DOUBLE", &native), "Error translating event name to code\n");
   print_event_info(native);
-  add_event(Events, native, &num_events);
+  add_event(cpu_events, native, &cpu_num_events);
   
   // SSE + x87.
   // CHECK(PAPI_event_name_to_code("FP_COMP_OPS_EXE:X87", &native), "Error translating FP_COMP_OS_EXE  event name to code\n");
   // print_event_info(native);
-  // add_event(Events, native, &num_events);
+  // add_event(cpu_events, native, &cpu_num_events);
   
-  CHECK(PAPI_event_name_to_code("FP_COMP_OPS_EXE:SSE_FP_PACKED_DOUBLE", &native), "Error translating FP_COMP_OPS_EXE:SSE_FP_PACKED_DOUBLE event name to code\n");
+  CHECK(PAPI_event_name_to_code("FP_COMP_OPS_EXE:SSE_FP_PACKED_DOUBLE", &native), 
+        "Error translating FP_COMP_OPS_EXE:SSE_FP_PACKED_DOUBLE event name to code\n");
   print_event_info(native);
-  add_event(Events, native, &num_events);
+  add_event(cpu_events, native, &cpu_num_events);
   
   // CHECK(PAPI_event_name_to_code("FP_COMP_OPS_EXE:SSE_FP_SCALAR_SINGLE", &native), "Error translating FP_COMP_OPS_EXE:SSE_FP_SCALAR_SINGLE event name to code\n");
   // print_event_info(native);
-  // add_event(Events, native, &num_events);
+  // add_event(cpu_events, native, &cpu_num_events);
   
   // CHECK(PAPI_event_name_to_code("FP_COMP_OPS_EXE:SSE_PACKED_SINGLE", &native), "Error translating FP_COMP_OPS_EXE:SSE_PACKED_SINGLE event name to code\n");
   // print_event_info(native);
-  // add_event(Events, native, &num_events);
+  // add_event(cpu_events, native, &cpu_num_events);
   
 //  CHECK(PAPI_event_name_to_code("FP_COMP_OPS_EXE:SSE_SCALAR_DOUBLE", &native), "Error translating FP_COMP_OPS_EXE:SSE_SCALAR_DOUBLE  event name to code\n");
 //  print_event_info(native);
-//  add_event(Events, native, &num_events);
+//  add_event(cpu_events, native, &cpu_num_events);
 }
 
 void register_mem_events() {
   int native;
-  // Events related to cache and memory accesses: 
-  //  iCHECK(PAPI_event_name_to_code("L1D:REPLACEMENT", &native), "Error translating L1D:REPLACEMENT event name to code\n");
+  // cpu_events related to cache and memory accesses: 
+  //  iCHECK(PAPI_event_name_to_code("L1D:REPLACEMENT", &native),
+  //  "Error translating L1D:REPLACEMENT event name to code\n");
   // print_event_info(native);
-  // add_event(Events, native, &num_events);
+  // add_event(cpu_events, native, &cpu_num_events);
   
   // CHECK(PAPI_event_name_to_code("L1D:M_EVICT", &native), "Error translating L1D:M_EVICT event name to code\n");
   // print_event_info(native);
-  // add_event(Events, native, &num_events);
+  // add_event(cpu_events, native, &cpu_num_events);
  
-  // CHECK(PAPI_event_name_to_code("perf::PERF_COUNT_HW_CACHE_L1D", &native), "Error translating perf::PERF_COUNT_HW_CACHE_L1D:MISS event name to code\n");
+  // CHECK(PAPI_event_name_to_code("perf::PERF_COUNT_HW_CACHE_L1D", &native), 
+  // "Error translating perf::PERF_COUNT_HW_CACHE_L1D:MISS event name to code\n");
+
   // print_event_info(native);
-  // add_event(Events, native, &num_events);
+  // add_event(cpu_events, native, &cpu_num_events);
   //
   CHECK(PAPI_event_name_to_code("PAPI_L1_DCM", &native), "Error translating PAPI_L1_DCM event name to code\n");
   print_event_info(native);
-  add_event(Events, native, &num_events);
+  add_event(cpu_events, native, &cpu_num_events);
   
   CHECK(PAPI_event_name_to_code("PAPI_L2_DCM", &native), "Error translating PAPI_L2_DCM event name to code\n");
   print_event_info(native);
-  add_event(Events, native, &num_events);
+  add_event(cpu_events, native, &cpu_num_events);
 
   CHECK(PAPI_event_name_to_code("PAPI_L1_LDM", &native), "Error translating PAPI_L1_LDM event name to code\n");
   print_event_info(native);
-  add_event(Events, native, &num_events);
+  add_event(cpu_events, native, &cpu_num_events);
   
   CHECK(PAPI_event_name_to_code("PAPI_L1_STM", &native), "Error translating PAPI_L1_STM  event name to code\n");
   print_event_info(native);
-  add_event(Events, native, &num_events);
+  add_event(cpu_events, native, &cpu_num_events);
   
   CHECK(PAPI_event_name_to_code("PAPI_L2_STM", &native), "Error translating PAPI_L2_STM  event name to code\n");
   print_event_info(native);
-  add_event(Events, native, &num_events);
+  add_event(cpu_events, native, &cpu_num_events);
 }
 
 void print_event_info(int event_code) { 
@@ -310,13 +302,14 @@ void print_event_info(int event_code) {
     printf("------------------------------------\n");
     printf("Event code: %i\n", event_code);
     printf("Name: %s\n", info.symbol);
+    printf("Units: %s\n", info.units);
     printf("Description: %s\n", info.long_descr);
     printf("------------------------------------\n");
   }
 }
 
 void fill_event_set() {  
-  int retval = PAPI_add_events(native_event_set, Events, num_events); 
+  int retval = PAPI_add_events(cpu_native_event_set, cpu_events, cpu_num_events); 
   if (retval != PAPI_OK) {
     printf ("Error adding events to event set\n");
     handle_error(retval);    
@@ -326,26 +319,160 @@ void fill_event_set() {
 // Used when the non high level Apis are used. 
 void start_papi() {
   printf ("Start PAPI events !!\n");
-  CHECK (PAPI_start(native_event_set), "Error start_papi()\n");
-  printf ("PAPI events stopped !!\n");
+  CHECK (PAPI_start(cpu_native_event_set), "Error start_papi()\n");
+  printf ("PAPI events started !!\n");
 }
 
 
 // Used when the non high level Apis are used. 
 void stop_papi() {
   printf ("Stop PAPI events!!\n");
-  CHECK (PAPI_stop(native_event_set, Values), "Error stop_papi\n");
+  CHECK (PAPI_stop(cpu_native_event_set, cpu_values), "Error stop_papi\n");
   printf ("Stop PAPI events done !!\n");
 }
 
 void finalize_native() {
-  CHECK (PAPI_cleanup_eventset(native_event_set) , "Error cleaning up events !!\n");
-  CHECK (PAPI_destroy_eventset(&native_event_set), "Error destroying events !!\n");
+  CHECK (PAPI_cleanup_eventset(cpu_native_event_set) , "Error cleaning up events !!\n");
+  CHECK (PAPI_destroy_eventset(&cpu_native_event_set), "Error destroying events !!\n");
+}
+
+
+void print_comp_details(const PAPI_component_info_t * cmp) {
+  printf ("Name: %s\n", cmp->name);
+  printf ("Description: %s\n", cmp->description);
+  printf ("Version: %s\n", cmp->version);
+  printf ("Support Version: %s\n", cmp->support_version);
+  printf ("Kernel Version: %s\n", cmp->kernel_version);
+}
+
+BOOL find_rapl() {
+  int num_comps; 
+  int cid;
+  // First, look for the RAPL component:
+  num_comps = PAPI_num_components();
+  for (cid=0; cid<num_comps; cid++) {
+    cmpinfo = PAPI_get_component_info(cid);
+    if (cmpinfo == NULL) {
+       printf("PAPI_get_component_info failed\n");
+       exit(-1);
+    }
+
+    if (strstr(cmpinfo->name,"rapl")) {
+      rapl_cid=cid;
+      printf("Found rapl component at cid %d\n",rapl_cid);
+      if (cmpinfo->disabled) { 
+        printf("RAPL component disabled: %s\n", cmpinfo->disabled_reason);
+      } else {
+        print_comp_details(cmpinfo); 
+        return TRUE;
+      }
+    }
+  } 
+  return FALSE;
+}
+
+
+void list_rapl_events() {
+  int code = PAPI_NATIVE_MASK;
+  int    r = PAPI_enum_cmp_event(&code, PAPI_ENUM_EVENTS, rapl_cid);
+  rapl_events_count = 0;
+  CHECK(r, " PAPI_enum_cmp_events failed\n");
+  
+  printf("listing RAPL events\n");
+  while (r == PAPI_OK) {
+    rapl_events_count++;
+    //print_event_info (code); 
+    r = PAPI_enum_cmp_event(&code, PAPI_ENUM_EVENTS, rapl_cid);
+  }
+}
+
+
+void read_config() {
+// Supposedly reading sone hypotheitcal config file that will set the values for settings.
+  enable_rapl = TRUE; 
+  enable_cpu  = TRUE;
+}
+
+void register_energy_events() {
+  int native;
+  rapl_num_registered_events = 0;
+  
+  CHECK(PAPI_event_name_to_code("PACKAGE_ENERGY_CNT:PACKAGE0", &native), "Error translating event name to code\n");
+  add_event(rapl_events, native, &rapl_num_registered_events);
+
+  CHECK(PAPI_event_name_to_code("PP1_ENERGY_CNT:PACKAGE0", &native), "Error translating event name to code\n");
+  add_event(rapl_events, native, &rapl_num_registered_events);
+
+  CHECK(PAPI_event_name_to_code("THERMAL_SPEC:PACKAGE0", &native), "Error translating event name to code\n");
+  add_event(rapl_events, native, &rapl_num_registered_events);
+  
+  // Now add events to the event set !
+  CHECK (PAPI_add_events(rapl_event_set, rapl_events, rapl_num_registered_events), "Error adding events to RAPL EventSet");
+  printf("Events added to event set successfully !!!\n"); 
+}
+
+void init_rapl_counters() {
+  
+  CHECK_BOOL (find_rapl(), "RAPL component not found in the system !!");
+  rapl_event_set = PAPI_NULL;  
+  list_rapl_events();
+  CHECK (PAPI_create_eventset(&rapl_event_set), "PAPI_create_event_set for RAPL failed !");
+  CHECK (PAPI_assign_eventset_component(rapl_event_set, rapl_cid),"Assigning rapl_event_set to RAPL");
+  // This breaks things when trying to register events in event set. the call reyurns with PAPI_OK though !!
+//  CHECK (PAPI_set_multiplex(rapl_event_set), "PAPI_set_multiplex(rapl_event_set) Failed !!!");
+  
+  rapl_values = (long_long*)calloc(rapl_events_count, sizeof(long_long));
+  rapl_events = (int*)calloc(rapl_events_count, sizeof(int));
+  
+  register_energy_events();
+  
+}
+
+void test() {
+  init_library();
+
+
+  if (rapl_enabled) 
+    init_rapl_counters();
+
+  if (cpu_enabled)
+    init_cpu_counters();
+
+  // do testing here !
+
+}
+
+void test_papi_rapl() {
+  
+
+}
+
+void test_papi_cpu() {
+  // TODO: Make this into a test case to check for correctness when 
+  //   trying it on new architectures.
+  start_counting();
+  int i = 90; 
+  double vvv = 9.7;
+  double* arr = (double*)(malloc(sizeof(double)*1000));
+  for (i = 90; i < 999 ; i++) {
+    if (i < 90)
+      printf("i = %i\n", i);
+    if (i==999)
+      break;
+    vvv *= i*0.54;
+    arr[i] = vvv;
+  }
+  printf("i = %i , vv = %f \n", i, vvv);
+  stop_counting();
+  print_counters();  
+  finalize_native();
+  finalize();
 }
 
 #ifdef TEST 
 int main() {
-  test_papi();
+  read_config();
+  test();
   return 0;
 }
 #endif
