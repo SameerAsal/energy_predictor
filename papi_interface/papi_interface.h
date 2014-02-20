@@ -22,16 +22,16 @@ int rapl_num_registered_events;
 
 
 // Library settings: 
-BOOL enable_rapl; 
-BOOL enable_cpu;
+BOOL rapl_enabled; 
+BOOL cpu_enabled;
 
 // Value for timers.
 long_long start_usec, end_usec, total_usec;
 const PAPI_component_info_t *cmpinfo;
 
-// Users should only use those !
-void start_counting();
-void stop_counting();
+// CPU counters Users should only use those !
+void start_cpu_counting();
+void stop_cpu_counting();
 
 // private function. 
 // user don't touch those.
@@ -66,10 +66,13 @@ void print_comp_details(const PAPI_component_info_t*);
 void print_counters();
 void print_counters_to_file(char*);
 
-void test_papi_cpu();
+void test_papi();
 // RAPL + Energy function:
 void test_papi_rapl();
 void init_rapl();
+
+void start_rapl_counting();
+void stop_rapl_counting();
 
 // Deprecated: 
 // Can be used to read counters without stopping the counters.Can be only used when the high level API is used, now that 

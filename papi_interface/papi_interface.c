@@ -1,8 +1,9 @@
 #include <string.h>
 #include "papi_interface.h"
 
+
 // http://icl.cs.utk.edu/projects/papi/wiki/PAPIC:High_Level#High_Level_Code_Example
-void start_counting() { 
+void start_cpu_counting() { 
   // Decide weather we want to use 
   // start_couters OR start_papi
   // TODO: Smarter way to choose based on numnber of counters we are trying to read !
@@ -11,7 +12,7 @@ void start_counting() {
   start_usec =  PAPI_get_real_usec();
 }
 
-void stop_counting() {
+void stop_cpu_counting() {
   // Decide weather we want to use: 
   // stop_couters OR stop_papi
   end_usec = PAPI_get_real_usec();
@@ -64,10 +65,20 @@ void  print_counters_to_file(char* file_name) {
     exit(-1);
   } 
   char event_name[PAPI_MAX_STR_LEN];
-  for (idx=0; idx < cpu_num_events; idx++) {
-    PAPI_event_code_to_name(cpu_events[idx], event_name);
-    fprintf(out_file,"%s:\t%lld\n", event_name, cpu_values[idx]);
+  if (cpu_enabled) {
+    for (idx=0; idx < cpu_num_events; idx++) {
+      PAPI_event_code_to_name(cpu_events[idx], event_name);
+      fprintf(out_file,"%s:\t%lld\n", event_name, cpu_values[idx]);
+    }
   }
+
+  if (rapl_enabled) {
+    for (idx=0; idx < rapl_num_registered_events; idx++) {
+      PAPI_event_code_to_name(rapl_events[idx], event_name);
+      fprintf(out_file,"%s :\t%lld\n", event_name, rapl_values[idx]);
+    } 
+  }
+
   fprintf(out_file,"%s:\t%f\n", "EXEC_TIME", total_usec/1000.0);
   fclose(out_file);
 }
@@ -75,11 +86,24 @@ void  print_counters_to_file(char* file_name) {
 void print_counters() {
   int idx=0;
   char event_name[PAPI_MAX_STR_LEN];
-  printf("Values of performance counters: \n");
-  for (idx=0; idx < cpu_num_events; idx++) {
-    PAPI_event_code_to_name(cpu_events[idx], event_name);
-    printf("%s :\t%lld\n", event_name, cpu_values[idx]);
-  } 
+
+  if (cpu_enabled) {
+    printf("CPU performance counters: \n");
+    for (idx=0; idx < cpu_num_events; idx++) {
+      PAPI_event_code_to_name(cpu_events[idx], event_name);
+      printf("%s :\t%lld\n", event_name, cpu_values[idx]);
+    } 
+  }
+
+  if (rapl_enabled) {
+    printf("RAPL performance counters: \n");
+    for (idx=0; idx < rapl_num_registered_events; idx++) {
+      PAPI_event_code_to_name(rapl_events[idx], event_name);
+      printf("%s :\t%lld\n", event_name, rapl_values[idx]);
+    } 
+  }
+
+
   printf("%s:\t%f\n", "EXEC_TIME", total_usec/1000.0);
 }
 
@@ -381,7 +405,7 @@ void list_rapl_events() {
   printf("listing RAPL events\n");
   while (r == PAPI_OK) {
     rapl_events_count++;
-    //print_event_info (code); 
+    print_event_info (code); 
     r = PAPI_enum_cmp_event(&code, PAPI_ENUM_EVENTS, rapl_cid);
   }
 }
@@ -389,8 +413,8 @@ void list_rapl_events() {
 
 void read_config() {
 // Supposedly reading sone hypotheitcal config file that will set the values for settings.
-  enable_rapl = TRUE; 
-  enable_cpu  = TRUE;
+  rapl_enabled = TRUE; 
+  cpu_enabled  = TRUE;
 }
 
 void register_energy_events() {
@@ -402,6 +426,9 @@ void register_energy_events() {
 
   CHECK(PAPI_event_name_to_code("PP1_ENERGY_CNT:PACKAGE0", &native), "Error translating event name to code\n");
   add_event(rapl_events, native, &rapl_num_registered_events);
+  
+  CHECK(PAPI_event_name_to_code("rapl:::PP0_ENERGY_CNT:PACKAGE0", &native), "Error translating rapl:::PP0_ENERGY_CNT:PACKAGE0\n");
+  add_event(rapl_events, native, &rapl_num_registered_events);
 
   CHECK(PAPI_event_name_to_code("THERMAL_SPEC:PACKAGE0", &native), "Error translating event name to code\n");
   add_event(rapl_events, native, &rapl_num_registered_events);
@@ -411,34 +438,69 @@ void register_energy_events() {
   printf("Events added to event set successfully !!!\n"); 
 }
 
-void init_rapl_counters() {
+
   
+  
+
+void init_rapl_counters() {
   CHECK_BOOL (find_rapl(), "RAPL component not found in the system !!");
   rapl_event_set = PAPI_NULL;  
   list_rapl_events();
   CHECK (PAPI_create_eventset(&rapl_event_set), "PAPI_create_event_set for RAPL failed !");
   CHECK (PAPI_assign_eventset_component(rapl_event_set, rapl_cid),"Assigning rapl_event_set to RAPL");
   // This breaks things when trying to register events in event set. the call reyurns with PAPI_OK though !!
-//  CHECK (PAPI_set_multiplex(rapl_event_set), "PAPI_set_multiplex(rapl_event_set) Failed !!!");
+  // CHECK (PAPI_set_multiplex(rapl_event_set), "PAPI_set_multiplex(rapl_event_set) Failed !!!");
   
   rapl_values = (long_long*)calloc(rapl_events_count, sizeof(long_long));
   rapl_events = (int*)calloc(rapl_events_count, sizeof(int));
   
   register_energy_events();
-  
+}
+
+void start_rapl_counting() {
+  printf ("Start PAPI RAPL events !!\n");
+  CHECK (PAPI_start(rapl_event_set), "Error start_rapl_counting()\n");
+  printf ("PAPI RAPL events started !!\n");
+}
+
+void stop_rapl_counting() {
+  printf ("Stop PAPI RAPL events!!\n");
+  CHECK (PAPI_stop(rapl_event_set, rapl_values), "Error stop_papi\n");
+  printf ("Stop PAPI RAPl events done !!\n");
 }
 
 void test() {
+
   init_library();
 
-
-  if (rapl_enabled) 
+  if (rapl_enabled) {
     init_rapl_counters();
+    start_rapl_counting();
+  }
 
-  if (cpu_enabled)
+  if (cpu_enabled) {
     init_cpu_counters();
+    start_cpu_counting();
+  }
 
-  // do testing here !
+  // Do testing here !
+  test_papi(); 
+
+  if (rapl_enabled) {
+    stop_rapl_counting();
+  }
+
+  if (cpu_enabled) {
+    stop_cpu_counting();
+  }
+  
+  print_counters();  
+  print_counters_to_file("rapl+cpu.res");  
+  
+  finalize_native();
+  finalize();
+  
+  
 
 }
 
@@ -447,26 +509,42 @@ void test_papi_rapl() {
 
 }
 
-void test_papi_cpu() {
-  // TODO: Make this into a test case to check for correctness when 
-  //   trying it on new architectures.
-  start_counting();
-  int i = 90; 
-  double vvv = 9.7;
-  double* arr = (double*)(malloc(sizeof(double)*1000));
-  for (i = 90; i < 999 ; i++) {
-    if (i < 90)
-      printf("i = %i\n", i);
-    if (i==999)
-      break;
-    vvv *= i*0.54;
-    arr[i] = vvv;
-  }
-  printf("i = %i , vv = %f \n", i, vvv);
-  stop_counting();
-  print_counters();  
-  finalize_native();
-  finalize();
+void test_papi() {
+
+#define MATRIX_SIZE 512
+
+     static double a[MATRIX_SIZE][MATRIX_SIZE];
+     static double b[MATRIX_SIZE][MATRIX_SIZE];
+     static double c[MATRIX_SIZE][MATRIX_SIZE];
+/* Naive matrix multiply */
+       double s;
+       int i,j,k;
+
+
+       for(i=0;i<MATRIX_SIZE;i++) {
+	 for(j=0;j<MATRIX_SIZE;j++) {
+	   a[i][j]=(double)i*(double)j;
+	   b[i][j]=(double)i/(double)(j+5);
+	 }
+       }
+
+       for(j=0;j<MATRIX_SIZE;j++) {
+	 for(i=0;i<MATRIX_SIZE;i++) {
+	   s=0;
+	   for(k=0;k<MATRIX_SIZE;k++) {
+	     s+=a[i][k]*b[k][j];
+	   }
+	   c[i][j] = s;
+	 }
+       }
+
+       s=0.0;
+       for(i=0;i<MATRIX_SIZE;i++) {
+	 	for(j=0;j<MATRIX_SIZE;j++) {
+	   		s+=c[i][j];
+	 	}
+       }
+
 }
 
 #ifdef TEST 
