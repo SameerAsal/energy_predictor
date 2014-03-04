@@ -6,11 +6,16 @@
 #include "decls.h"
 #include "util.h"
 
-void trisolv(long N) 
-{
+#define  PERFCTR
+#include "papi_defs.h"
+
+void trisolv(long N, char** argv) {
     long i,j,k;
 
-#pragma scop
+  #ifdef PERFCTR
+    PERF_INIT(); 
+  #endif
+  #pragma scop
     for (i=0;i<=N-1;i++) {
         for (j=0;j<=N-1;j++) {
             for (k=0;k<=j-1;k++) {
@@ -20,18 +25,21 @@ void trisolv(long N)
             B[j][i]=B[j][i]/L[j][j]; // S2 ;
         } // for j
     } // for i
-#pragma endscop
+  #pragma endscop
+  #ifdef PERFCTR
+    PERF_EXIT(argv[0]);
+  #endif
 }
 
 
-int main()
+int main(int argc, char** argv)
 {
     long N=NMAX;
     int i,j;
     double t_start, t_end;
 
     IF_TIME(t_start = rtclock());
-    trisolv(N);
+    trisolv(N, argv);
     IF_TIME(t_end = rtclock());
     IF_TIME(fprintf(stderr, "%0.6lfs\n", t_end - t_start));
 

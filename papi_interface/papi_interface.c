@@ -1,3 +1,4 @@
+#include <time.h>
 #include <string.h>
 #include "papi_interface.h"
 
@@ -59,12 +60,15 @@ void read_counters() {
 
 void  print_counters_to_file(char* file_name) {
   int idx=0;
-  FILE* out_file = fopen(file_name, "w");
-  if (out_file == NULL) { 
-    printf ("Error opening file %s for writing \n", file_name);
-    exit(-1);
-  } 
+  FILE* out_file = fopen(file_name, "a");
+  char event_unit[PAPI_MAX_STR_LEN];
   char event_name[PAPI_MAX_STR_LEN];
+  char time_now[100];
+  strcpy(event_unit, "NN");   
+  // Add the time before appendig the entry for the new measurement. 
+  get_time(time_now);
+  fprintf(out_file,"\n%s-----------------------------------------------------\n", time_now);
+  
   if (cpu_enabled) {
     for (idx=0; idx < cpu_num_events; idx++) {
       PAPI_event_code_to_name(cpu_events[idx], event_name);
@@ -74,8 +78,13 @@ void  print_counters_to_file(char* file_name) {
 
   if (rapl_enabled) {
     for (idx=0; idx < rapl_num_registered_events; idx++) {
+      get_event_unit(rapl_events[idx], event_unit);
       PAPI_event_code_to_name(rapl_events[idx], event_name);
-      fprintf(out_file,"%s :\t%lld\n", event_name, rapl_values[idx]);
+      if (strstr(event_unit,"nJ")) {
+        fprintf(out_file,"%s :\t%f J\n", event_name, rapl_values[idx]/1.0e09);
+      } else {
+        fprintf(out_file,"%s :\t%lld \t %s\n", event_name, rapl_values[idx], event_unit);
+      }
     } 
   }
 
@@ -86,7 +95,8 @@ void  print_counters_to_file(char* file_name) {
 void print_counters() {
   int idx=0;
   char event_name[PAPI_MAX_STR_LEN];
-
+  char event_unit[PAPI_MAX_STR_LEN];
+      
   if (cpu_enabled) {
     printf("CPU performance counters: \n");
     for (idx=0; idx < cpu_num_events; idx++) {
@@ -96,13 +106,16 @@ void print_counters() {
   }
 
   if (rapl_enabled) {
-    printf("RAPL performance counters: \n");
     for (idx=0; idx < rapl_num_registered_events; idx++) {
+      get_event_unit(rapl_events[idx], event_unit);
       PAPI_event_code_to_name(rapl_events[idx], event_name);
-      printf("%s :\t%lld\n", event_name, rapl_values[idx]);
+      if (strstr(event_unit,"nJ")) {
+        printf("%s :\t%f J\n", event_name, rapl_values[idx]/1.0e09);
+      } else {
+        printf("%s :\t%lld \t %s\n", event_name, rapl_values[idx], event_unit);
+      }
     } 
   }
-
 
   printf("%s:\t%f\n", "EXEC_TIME", total_usec/1000.0);
 }
@@ -134,15 +147,15 @@ void show_all_events() {
   char EventCodeStr[PAPI_MAX_STR_LEN];
   EventCode = 0 | PAPI_NATIVE_MASK;
   retval = PAPI_library_init(PAPI_VER_CURRENT);
-  if  (retval != PAPI_VER_CURRENT) {
+  if (retval != PAPI_VER_CURRENT) {
     fprintf(stderr, "PAPI library init error!\n");
     exit(1); 
   }
 
   do {
-   /* Translate the integer code to a string */
+   // Translate the integer code to a string.
    if (PAPI_event_code_to_name(EventCode, EventCodeStr) == PAPI_OK) {
-      /* Print all the native events for this platform */
+      // Print all the native events for this platform.
       printf("Name: %s\nCode: %x\n", EventCodeStr, EventCode);
    } else {
      printf("Failed to translate event name \n");
@@ -311,6 +324,23 @@ void register_mem_events() {
   add_event(cpu_events, native, &cpu_num_events);
 }
 
+
+void get_event_unit(int event_code, char *unit) { 
+  PAPI_event_info_t info;
+  strcpy(unit, "II");
+  int retval = PAPI_get_event_info(event_code, &info);
+
+  if (retval != PAPI_OK) {
+    printf("PAPI_get_event_info failed !\n");
+    if (PAPI_enum_event(&event_code, 0) != PAPI_OK) {
+      fprintf(stderr,"PAPI_enum_event failed !\n");
+    }
+    strcpy(unit, "Unknown");
+  } else {
+    strcpy(unit, info.units);
+  }
+}
+
 void print_event_info(int event_code) { 
   PAPI_event_info_t info;
   int retval = PAPI_get_event_info(event_code, &info);
@@ -412,7 +442,8 @@ void list_rapl_events() {
 
 
 void read_config() {
-// Supposedly reading sone hypotheitcal config file that will set the values for settings.
+  // Supposedly reading sone hypotheitcal config file that will hopefully 
+  // set the values for settings for an illusion of organized code.
   rapl_enabled = TRUE; 
   cpu_enabled  = TRUE;
 }
@@ -421,26 +452,60 @@ void register_energy_events() {
   int native;
   rapl_num_registered_events = 0;
   
-  CHECK(PAPI_event_name_to_code("PACKAGE_ENERGY_CNT:PACKAGE0", &native), "Error translating event name to code\n");
+  CHECK(PAPI_event_name_to_code("rapl:::PACKAGE_ENERGY:PACKAGE0", &native), "Error translating event name to code\n");
   add_event(rapl_events, native, &rapl_num_registered_events);
 
-  CHECK(PAPI_event_name_to_code("PP1_ENERGY_CNT:PACKAGE0", &native), "Error translating event name to code\n");
+  CHECK(PAPI_event_name_to_code("rapl:::PP1_ENERGY:PACKAGE0", &native), "Error translating event name to code\n");
   add_event(rapl_events, native, &rapl_num_registered_events);
   
-  CHECK(PAPI_event_name_to_code("rapl:::PP0_ENERGY_CNT:PACKAGE0", &native), "Error translating rapl:::PP0_ENERGY_CNT:PACKAGE0\n");
+  CHECK(PAPI_event_name_to_code("rapl:::PP0_ENERGY:PACKAGE0", &native), "Error translating rapl:::PP0_ENERGY_CNT:PACKAGE0\n");
   add_event(rapl_events, native, &rapl_num_registered_events);
 
-  CHECK(PAPI_event_name_to_code("THERMAL_SPEC:PACKAGE0", &native), "Error translating event name to code\n");
-  add_event(rapl_events, native, &rapl_num_registered_events);
+  // CHECK(PAPI_event_name_to_code("THERMAL_SPEC:PACKAGE0", &native), "Error translating event name to code\n");
+  // add_event(rapl_events, native, &rapl_num_registered_events);
   
+  //CHECK(PAPI_event_name_to_code("MSR_PKG_ENERGY_STATUS", &native), "Error translating MSR_PKG_ENERGY_STATUS to numeric code\n");
+  //add_event(rapl_events, native, &rapl_num_registered_events);
+ 
   // Now add events to the event set !
   CHECK (PAPI_add_events(rapl_event_set, rapl_events, rapl_num_registered_events), "Error adding events to RAPL EventSet");
   printf("Events added to event set successfully !!!\n"); 
 }
+ 
 
+// Initialize everything
+void init_counters() {
 
-  
-  
+  printf("Inside init_counters()\n");
+  read_config();
+  init_library();
+  if (rapl_enabled) {
+    init_rapl_counters();
+  }
+
+  if (cpu_enabled) {
+    init_cpu_counters();
+  }
+}
+
+// Start counting.
+void start_counting() {
+  if (rapl_enabled) {
+    start_rapl_counting();
+  }
+  if (cpu_enabled) {
+    start_cpu_counting();
+  }
+}
+// Stop counting.
+void stop_counting() {
+  if (rapl_enabled) {
+    stop_rapl_counting();
+  }
+  if (cpu_enabled) {
+    stop_cpu_counting();
+  }
+}
 
 void init_rapl_counters() {
   CHECK_BOOL (find_rapl(), "RAPL component not found in the system !!");
@@ -455,6 +520,7 @@ void init_rapl_counters() {
   rapl_events = (int*)calloc(rapl_events_count, sizeof(int));
   
   register_energy_events();
+  printf("RAPL counters initialized \n");
 }
 
 void start_rapl_counting() {
@@ -469,82 +535,63 @@ void stop_rapl_counting() {
   printf ("Stop PAPI RAPl events done !!\n");
 }
 
-void test() {
-
-  init_library();
-
-  if (rapl_enabled) {
-    init_rapl_counters();
-    start_rapl_counting();
-  }
-
-  if (cpu_enabled) {
-    init_cpu_counters();
-    start_cpu_counting();
-  }
-
-  // Do testing here !
+void test() {    
+  init_counters();
+  start_counting();
   test_papi(); 
-
-  if (rapl_enabled) {
-    stop_rapl_counting();
-  }
-
-  if (cpu_enabled) {
-    stop_cpu_counting();
-  }
-  
+  stop_counting();
   print_counters();  
   print_counters_to_file("rapl+cpu.res");  
   
   finalize_native();
   finalize();
-  
-  
-
 }
 
-void test_papi_rapl() {
-  
-
-}
 
 void test_papi() {
-
-#define MATRIX_SIZE 512
-
-     static double a[MATRIX_SIZE][MATRIX_SIZE];
-     static double b[MATRIX_SIZE][MATRIX_SIZE];
-     static double c[MATRIX_SIZE][MATRIX_SIZE];
-/* Naive matrix multiply */
-       double s;
-       int i,j,k;
+#define MATRIX_SIZE 1024
+ static double a[MATRIX_SIZE][MATRIX_SIZE];
+ static double b[MATRIX_SIZE][MATRIX_SIZE];
+ static double c[MATRIX_SIZE][MATRIX_SIZE];
+    /* Naive matrix multiply */
+ double s;
+ int i,j,k;
 
 
-       for(i=0;i<MATRIX_SIZE;i++) {
-	 for(j=0;j<MATRIX_SIZE;j++) {
-	   a[i][j]=(double)i*(double)j;
-	   b[i][j]=(double)i/(double)(j+5);
-	 }
-       }
+  for(i=0;i<MATRIX_SIZE;i++) {
+    for(j=0;j<MATRIX_SIZE;j++) {
+      a[i][j]=(double)i*(double)j;
+        b[i][j]=(double)i/(double)(j+5);
+    }
+  }
 
-       for(j=0;j<MATRIX_SIZE;j++) {
-	 for(i=0;i<MATRIX_SIZE;i++) {
-	   s=0;
-	   for(k=0;k<MATRIX_SIZE;k++) {
-	     s+=a[i][k]*b[k][j];
-	   }
-	   c[i][j] = s;
-	 }
-       }
+  for(j=0;j<MATRIX_SIZE;j++) {
+    for(i=0;i<MATRIX_SIZE;i++) {
+      s=0;
+      for(k=0;k<MATRIX_SIZE;k++) {
+        s+=a[i][k]*b[k][j];
+      }
+      c[i][j] = s;
+     }
+  }
 
-       s=0.0;
-       for(i=0;i<MATRIX_SIZE;i++) {
-	 	for(j=0;j<MATRIX_SIZE;j++) {
-	   		s+=c[i][j];
-	 	}
-       }
+  s=0.0;
+  for(i=0;i<MATRIX_SIZE;i++) {
+    for(j=0;j<MATRIX_SIZE;j++) {
+      s+=c[i][j];
+     }
+   }
+}
 
+
+void get_time(char* now) {
+  time_t current_time;
+  char* c_time_string; 
+  /* Obtain current time as seconds elapsed since the Epoch. */
+  current_time = time(NULL);  
+  /* Convert to local time format. */
+  c_time_string = ctime(&current_time); 
+  strcpy(now, c_time_string);
 }
 
 #ifdef TEST 

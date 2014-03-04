@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <math.h>
 
+#define PERFCTR
+
 #include <assert.h>
 
 #define N 2000
@@ -13,7 +15,6 @@
 #pragma declarations
 double a[N][N];
 #pragma enddeclarations
-#define PERFCTR
 #ifdef PERFCTR
 
 #include "papiStdEventDefs.h"
@@ -24,8 +25,7 @@ double a[N][N];
 
 #include "util.h"
 
-int main()
-{
+int main(int argc, char** argv) {
     int i, j, k, t;
 
     double t_start, t_end;
@@ -33,7 +33,7 @@ int main()
     init_array() ;
 
 #ifdef PERFCTR
-    PERF_INIT; 
+    PERF_INIT(); 
 #endif
 
     IF_TIME(t_start = rtclock());
@@ -54,7 +54,7 @@ int main()
     IF_TIME(fprintf(stdout, "%0.6lfs\n", t_end - t_start));
 
 #ifdef PERFCTR
-    PERF_EXIT; 
+    PERF_EXIT(argv[0]);
 #endif
 
   if (fopen(".test", "r")) {

@@ -29,6 +29,13 @@ BOOL cpu_enabled;
 long_long start_usec, end_usec, total_usec;
 const PAPI_component_info_t *cmpinfo;
 
+// Initialize everything
+void init_counters();
+// Start counting.
+void start_counting();
+// Stop counting.
+void stop_counting();
+
 // CPU counters Users should only use those !
 void start_cpu_counting();
 void stop_cpu_counting();
@@ -56,11 +63,13 @@ void finalize_native();
 
 // Utility functions:
 void read_config();
+void get_event_unit(int event_code, char *unit); 
 void handle_error(int); 
 void CHECK (int retval, char* error_message);
 void CHECK_BOOL (int retval, char* error_message);
 void print_event_info(int); 
 void print_comp_details(const PAPI_component_info_t*);
+void get_time(char* now);
 
 // Printing functions:
 void print_counters();
@@ -69,7 +78,7 @@ void print_counters_to_file(char*);
 void test_papi();
 // RAPL + Energy function:
 void test_papi_rapl();
-void init_rapl();
+void init_rapl_counters();
 
 void start_rapl_counting();
 void stop_rapl_counting();
