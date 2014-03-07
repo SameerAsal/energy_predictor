@@ -11,13 +11,25 @@ void init_array()
 {
     int i, j;
 
-    for (i=0; i<N; i++) {
-        for (j=0; j<N; j++) {
+    for (i=0; i<M; i++) {
+        for (j=0; j<K; j++) {
             A[i][j] = (i + j);
+        }
+    }
+
+    for (i=0; i<K; i++) {
+        for (j=0; j<N; j++) {
             B[i][j] = (double)(i*j);
+        }
+    }
+
+
+    for (i=0; i<M; i++) {
+        for (j=0; j<N; j++) {
             C[i][j] = 0.0;
         }
     }
+
 }
 
 
@@ -25,7 +37,7 @@ void print_array()
 {
     int i, j;
 
-    for (i=0; i<N; i++) {
+    for (i=0; i<M; i++) {
         for (j=0; j<N; j++) {
             fprintf(stdout, "%lf ", C[i][j]);
             if (j%80 == 79) fprintf(stdout, "\n");

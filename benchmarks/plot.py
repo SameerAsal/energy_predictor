@@ -1,3 +1,4 @@
+import pudb; pu.db
 import matplotlib as mpl
 mpl.use('Agg')
 import os
@@ -12,16 +13,15 @@ import shutil
 import math
 import Image
 #
-#This section generates gaphs from HFy benchmarking.
 #
 
-#***************************************************************************************************************************************************#
+#*****************************************************************************************************************************************#
 
 def get_counters(kernel_name):
   counters = []
   lines      = open("./" + kernel_name + "/orig_par_timings.txt").read().split('\n')
   for line in lines:
-    if line: # check line is not empty
+    if line and not(line[0] == "#"): # check line is not empty
       counters.append((line.strip()).split('\t')[0])
 
   return counters
@@ -92,8 +92,15 @@ def plot_graphs_separate(kernel_name, counters, directory):
   dest_paths = map(lambda file : directory + "/" + kernel_name + "_"  + file, data_files)
   # Read the data from each data file. Data resides in the second column, first column for the counter name.
   for file_path,dest_path  in zip(file_paths, dest_paths):
+    #try:
+    print "Working with:" + file_path
     data.append(np.loadtxt(file_path , usecols=[1]))
     shutil.copyfile(file_path,dest_path)
+    #except ValueError as exc:
+    #print "error processing file: "  +  file_path
+    #print exc
+    #sys.exit(-9)
+      
 
   data = np.asmatrix(data)
   # Create a graph for each hardware counter separetly!!
@@ -110,6 +117,8 @@ def plot_graphs_separate(kernel_name, counters, directory):
     #pdf_file = PdfPages(str(directory +"//" + kernel_name + "_" + str(counter) + "_perf.pdf"))
     fig      = plt.figure(1)
     subplot  = plt.subplot(111)
+    print "Kernel Name: " + kernel_name
+    print "Counter    : " + counters[counter]
     values   = map(lambda item: float(item), data[:,counter])
     idx      = np.arange(len(values))
     plt.bar(idx, values, label =counters[counter])
@@ -127,9 +136,10 @@ def plot_graphs_separate(kernel_name, counters, directory):
     img.save(fig_name + ".jpeg")
  
 def main():
-  bench_list       = ["adi", "lu", "matmul", "jacobi-1d-imper", "jacobi-2d-imper"]
+  #bench_list       = ["adi", "lu", "matmul", "jacobi-1d-imper", "jacobi-2d-imper"]
+  bench_list       = ["adi"]
   output_directory = "Results//" + datetime.datetime.now().strftime('%b-%d-%I%M%p-%G')
-  output_directory = "Results//" + "test_directory" 
+  output_directory = "Results//" 
   
   if not os.path.exists(output_directory):
     os.makedirs(output_directory)

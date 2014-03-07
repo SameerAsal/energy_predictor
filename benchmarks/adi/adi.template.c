@@ -14,7 +14,7 @@
 //#include "decls.h"
 
 #define T 500
-#define N 2048
+#define N %N_VAL%
 
 #define TMAX T
 #define NMAX N

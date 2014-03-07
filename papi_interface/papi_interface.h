@@ -70,6 +70,7 @@ void CHECK_BOOL (int retval, char* error_message);
 void print_event_info(int); 
 void print_comp_details(const PAPI_component_info_t*);
 void get_time(char* now);
+BOOL file_exists(char* name); 
 
 // Printing functions:
 void print_counters();

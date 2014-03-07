@@ -9,7 +9,7 @@
 #include <omp.h>
 
 // Replace the variable 
-#define N 2048
+#define N %N_VAL%
 
 #pragma declarations
 double a[N][N];

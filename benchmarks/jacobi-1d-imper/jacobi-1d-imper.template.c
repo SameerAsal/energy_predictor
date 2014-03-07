@@ -4,7 +4,7 @@
 
 #include "util.h"
 
-#define N 2048
+#define N %N_VAL%
 #define T 1000
 
 

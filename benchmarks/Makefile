@@ -1,4 +1,3 @@
-
 #DIRS = ssymm \
 	   strmm \
 	   gemver \
@@ -14,6 +13,7 @@
 	   fdtd-2d \
 	   mvt \
 	   lu
+
 DIRS = 	   matmul \
 	   jacobi-1d-imper \
 	   jacobi-2d-imper \

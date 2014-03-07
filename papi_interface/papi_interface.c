@@ -58,21 +58,66 @@ void read_counters() {
   }
 }
 
+BOOL file_exists(char* name) { 
+  FILE* file = NULL;
+  file = fopen(name,"r");
+  if (NULL == file) {
+    return FALSE;
+  } else {
+    fclose(file); 
+    return TRUE;
+  }  
+}
+
 void  print_counters_to_file(char* file_name) {
   int idx=0;
-  FILE* out_file = fopen(file_name, "a");
+  FILE* out_file;
   char event_unit[PAPI_MAX_STR_LEN];
   char event_name[PAPI_MAX_STR_LEN];
   char time_now[100];
-  strcpy(event_unit, "NN");   
+  BOOL exists = file_exists(file_name); 
+
+  if (!exists) {
+    out_file = fopen(file_name, "w");
+
+    // Add column for time stamp
+    fprintf(out_file,"%s", "Time_Stamp\t");
+
+    // Add the header for cpu counters
+    if (cpu_enabled) {
+      for (idx=0; idx < cpu_num_events; idx++) {
+        PAPI_event_code_to_name(cpu_events[idx], event_name);
+        fprintf(out_file,"%s\t", event_name);
+      }
+    }
+
+    // Add the header for RAPL counters:
+    if (rapl_enabled) {
+      for (idx=0; idx < rapl_num_registered_events; idx++) {
+        get_event_unit(rapl_events[idx], event_unit);
+        PAPI_event_code_to_name(rapl_events[idx], event_name);
+        if (strstr(event_unit,"nJ")) {
+          fprintf(out_file,"%s(J)\t", event_name);
+        } else {
+          fprintf(out_file,"%s\t", event_name);
+        }
+      } 
+    }
+
+    // Add Column for exeution time 
+    fprintf(out_file,"%s", "EXEC_TIME");
+
+    fprintf(out_file, "\n");
+  } else {
+    out_file = fopen(file_name, "a");    
+  }
+
   // Add the time before appendig the entry for the new measurement. 
   get_time(time_now);
-  fprintf(out_file,"\n%s-----------------------------------------------------\n", time_now);
-  
+  fprintf(out_file, "%s\t", time_now); 
   if (cpu_enabled) {
     for (idx=0; idx < cpu_num_events; idx++) {
-      PAPI_event_code_to_name(cpu_events[idx], event_name);
-      fprintf(out_file,"%s:\t%lld\n", event_name, cpu_values[idx]);
+      fprintf(out_file,"%lld\t", cpu_values[idx]);
     }
   }
 
@@ -81,14 +126,14 @@ void  print_counters_to_file(char* file_name) {
       get_event_unit(rapl_events[idx], event_unit);
       PAPI_event_code_to_name(rapl_events[idx], event_name);
       if (strstr(event_unit,"nJ")) {
-        fprintf(out_file,"%s :\t%f J\n", event_name, rapl_values[idx]/1.0e09);
+        fprintf(out_file,"%f\t", rapl_values[idx]/1.0e09);
       } else {
-        fprintf(out_file,"%s :\t%lld \t %s\n", event_name, rapl_values[idx], event_unit);
+        fprintf(out_file,"%lld\t",  rapl_values[idx]);
       }
     } 
   }
 
-  fprintf(out_file,"%s:\t%f\n", "EXEC_TIME", total_usec/1000.0);
+  fprintf(out_file,"%f\n", total_usec/1000.0);
   fclose(out_file);
 }
 
@@ -116,7 +161,6 @@ void print_counters() {
       }
     } 
   }
-
   printf("%s:\t%f\n", "EXEC_TIME", total_usec/1000.0);
 }
 
@@ -176,23 +220,23 @@ void add_event(int * events, int papi_event_code, int* idx) {
   }
   // Checks if the PAPI preset event can be counted, can also be used to check if  
   retval = PAPI_query_event(papi_event_code);
-  if (retval != PAPI_OK) {        
+  if (retval != PAPI_OK) {
     printf ("Event %s not spported\n", event_name);
     return;
   } else {
     events[*idx] = papi_event_code;
-    printf ("Adding %s to list of events\n", event_name);
+    // printf ("Adding %s to list of events\n", event_name);
     (*idx)++;
   }
 }
 
-// void register_events() {
+//void register_events() {
   // add_event(cpu_events,PAPI_VEC_SP, &cpu_num_events);
   // add_event(cpu_events,PAPI_DP_OPS, &cpu_num_events); 
   // counts all the double precision operations. 
-//  add_event(cpu_events,PAPI_VEC_DP, &cpu_num_events);
-//  add_event(cpu_events,PAPI_L1_DCM, &cpu_num_events);
-//  zero_fill_values();
+  //add_event(cpu_events,PAPI_VEC_DP, &cpu_num_events);
+  //add_event(cpu_events,PAPI_L1_DCM, &cpu_num_events);
+  //zero_fill_values();
 //}
 
 void finalize() {
@@ -259,7 +303,7 @@ void register_flop_events() {
   // add_event(cpu_events, native, &cpu_num_events);
 
   CHECK(PAPI_event_name_to_code("SIMD_FP_256:PACKED_DOUBLE", &native), "Error translating event name to code\n");
-  print_event_info(native);
+  // print_event_info(native);
   add_event(cpu_events, native, &cpu_num_events);
   
   // SSE + x87.
@@ -269,7 +313,7 @@ void register_flop_events() {
   
   CHECK(PAPI_event_name_to_code("FP_COMP_OPS_EXE:SSE_FP_PACKED_DOUBLE", &native), 
         "Error translating FP_COMP_OPS_EXE:SSE_FP_PACKED_DOUBLE event name to code\n");
-  print_event_info(native);
+  // print_event_info(native);
   add_event(cpu_events, native, &cpu_num_events);
   
   // CHECK(PAPI_event_name_to_code("FP_COMP_OPS_EXE:SSE_FP_SCALAR_SINGLE", &native), "Error translating FP_COMP_OPS_EXE:SSE_FP_SCALAR_SINGLE event name to code\n");
@@ -304,23 +348,23 @@ void register_mem_events() {
   // add_event(cpu_events, native, &cpu_num_events);
   //
   CHECK(PAPI_event_name_to_code("PAPI_L1_DCM", &native), "Error translating PAPI_L1_DCM event name to code\n");
-  print_event_info(native);
+  //print_event_info(native);
   add_event(cpu_events, native, &cpu_num_events);
   
   CHECK(PAPI_event_name_to_code("PAPI_L2_DCM", &native), "Error translating PAPI_L2_DCM event name to code\n");
-  print_event_info(native);
+  //print_event_info(native);
   add_event(cpu_events, native, &cpu_num_events);
 
   CHECK(PAPI_event_name_to_code("PAPI_L1_LDM", &native), "Error translating PAPI_L1_LDM event name to code\n");
-  print_event_info(native);
+  //print_event_info(native);
   add_event(cpu_events, native, &cpu_num_events);
   
   CHECK(PAPI_event_name_to_code("PAPI_L1_STM", &native), "Error translating PAPI_L1_STM  event name to code\n");
-  print_event_info(native);
+  //print_event_info(native);
   add_event(cpu_events, native, &cpu_num_events);
   
   CHECK(PAPI_event_name_to_code("PAPI_L2_STM", &native), "Error translating PAPI_L2_STM  event name to code\n");
-  print_event_info(native);
+  //print_event_info(native);
   add_event(cpu_events, native, &cpu_num_events);
 }
 
@@ -432,10 +476,10 @@ void list_rapl_events() {
   rapl_events_count = 0;
   CHECK(r, " PAPI_enum_cmp_events failed\n");
   
-  printf("listing RAPL events\n");
+  // printf("listing RAPL events\n");
   while (r == PAPI_OK) {
     rapl_events_count++;
-    print_event_info (code); 
+    // print_event_info (code); 
     r = PAPI_enum_cmp_event(&code, PAPI_ENUM_EVENTS, rapl_cid);
   }
 }
@@ -524,7 +568,7 @@ void init_rapl_counters() {
 }
 
 void start_rapl_counting() {
-  printf ("Start PAPI RAPL events !!\n");
+  //printf ("Start PAPI RAPL events !!\n");
   CHECK (PAPI_start(rapl_event_set), "Error start_rapl_counting()\n");
   printf ("PAPI RAPL events started !!\n");
 }
@@ -541,7 +585,7 @@ void test() {
   test_papi(); 
   stop_counting();
   print_counters();  
-  print_counters_to_file("rapl+cpu.res");  
+  print_counters_to_file("rapl+cpu.txt");  
   
   finalize_native();
   finalize();
@@ -591,6 +635,10 @@ void get_time(char* now) {
   current_time = time(NULL);  
   /* Convert to local time format. */
   c_time_string = ctime(&current_time); 
+
+  // Remnove the \n
+  c_time_string[strlen(c_time_string) - 1] = 0;
+  c_time_string[strlen(c_time_string)] = 0;
   strcpy(now, c_time_string);
 }
 
