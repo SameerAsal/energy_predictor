@@ -3,9 +3,9 @@
 #include <math.h>
 #include <assert.h>
 
-#define M 2048
-#define N 2048
-#define K 2048
+#define M 512
+#define N 3096
+#define K 512
 
 #define alpha 1
 #define beta 1

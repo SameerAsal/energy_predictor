@@ -28,7 +28,8 @@ ifeq ($(CC), icc)
 	PAR_FLAGS := -parallel
 	OMP_FLAGS := -openmp
 else
-	OPT_FLAGS := -O3 -ftree-vectorize -msse3 
+	#OPT_FLAGS := -O3 -ftree-vectorize -msse3 
+	OPT_FLAGS := -O3 -ftree-vectorize -mavx
 	PAR_FLAGS := -ftree-parallelize-loops=4
 	OMP_FLAGS := -fopenmp
 endif

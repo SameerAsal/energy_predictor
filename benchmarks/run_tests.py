@@ -1,6 +1,3 @@
-
-
-
 # loops over sover all the benchmarks templates, write a kernel that with a specific size
 # for each benchmarks then run make perf. 
 # next loop get a different size and run the tests. 
@@ -21,6 +18,7 @@ def test_all_versions(to_compose, tokens, text, bench, std_err, std_out):
 
     f = open(name, "w")
     f.write(solid)
+    #Write the filled in template !
     f.close()
     #Now make perf
     print "now running: " + str(e)
@@ -32,12 +30,13 @@ def test_all_versions(to_compose, tokens, text, bench, std_err, std_out):
 def run_tests():
   benchmarks = {"matmul", "jacobi-1d-imper","jacobi-2d-imper", "adi","lu"}
 
+  n_Values = [128,256,512,1024,2048,3096]
+  m_Values = [128,256,348,512]
+  k_Values = [128,256,348,512]
 
-  n_Values = [256,512,1024,2048]
-  m_Values = [256,512,1024,2048]
-  k_Values = [256,512,1024,2048]
+  #m_Values = [128,256,512,1024,2048,3096]
+  #k_Values = [128,256,512,1024,2048,3096]
   
-  # tokens = [ "%N_VAL%", "%M_VAL%", "%K_VAL%"]
   to_compose = []
 
   # open to forward output and erro to.

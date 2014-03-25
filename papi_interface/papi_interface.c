@@ -81,7 +81,7 @@ void  print_counters_to_file(char* file_name) {
     out_file = fopen(file_name, "w");
 
     // Add column for time stamp
-    fprintf(out_file,"%s", "Time_Stamp\t");
+    //fprintf(out_file,"%s", "Time_Stamp\t");
 
     // Add the header for cpu counters
     if (cpu_enabled) {
@@ -113,8 +113,8 @@ void  print_counters_to_file(char* file_name) {
   }
 
   // Add the time before appendig the entry for the new measurement. 
-  get_time(time_now);
-  fprintf(out_file, "%s\t", time_now); 
+  // get_time(time_now);
+  // fprintf(out_file, "%s\t", time_now); 
   if (cpu_enabled) {
     for (idx=0; idx < cpu_num_events; idx++) {
       fprintf(out_file,"%lld\t", cpu_values[idx]);
@@ -298,8 +298,8 @@ void register_flop_events() {
   // SSE, AVX , x87 (then the ones related to memory).
   int native;
   // Avx. 
-  // CHECK(PAPI_event_name_to_code("SIMD_FP_256:PACKED_SINGLE", &native), "Error translating event name to code\n");
-  // print_event_info(native);
+  //CHECK(PAPI_event_name_to_code("SIMD_FP_256:PACKED_SINGLE", &native), "Error translating event name to code\n");
+  //print_event_info(native);
   // add_event(cpu_events, native, &cpu_num_events);
 
   CHECK(PAPI_event_name_to_code("SIMD_FP_256:PACKED_DOUBLE", &native), "Error translating event name to code\n");
@@ -307,33 +307,42 @@ void register_flop_events() {
   add_event(cpu_events, native, &cpu_num_events);
   
   // SSE + x87.
-  // CHECK(PAPI_event_name_to_code("FP_COMP_OPS_EXE:X87", &native), "Error translating FP_COMP_OS_EXE  event name to code\n");
+  //CHECK(PAPI_event_name_to_code("FP_COMP_OPS_EXE:X87", &native), "Error translating FP_COMP_OS_EXE  event name to code\n");
   // print_event_info(native);
-  // add_event(cpu_events, native, &cpu_num_events);
+  //add_event(cpu_events, native, &cpu_num_events);
   
   CHECK(PAPI_event_name_to_code("FP_COMP_OPS_EXE:SSE_FP_PACKED_DOUBLE", &native), 
         "Error translating FP_COMP_OPS_EXE:SSE_FP_PACKED_DOUBLE event name to code\n");
   // print_event_info(native);
   add_event(cpu_events, native, &cpu_num_events);
   
-  // CHECK(PAPI_event_name_to_code("FP_COMP_OPS_EXE:SSE_FP_SCALAR_SINGLE", &native), "Error translating FP_COMP_OPS_EXE:SSE_FP_SCALAR_SINGLE event name to code\n");
+  //CHECK(PAPI_event_name_to_code("FP_COMP_OPS_EXE:SSE_FP_SCALAR_SINGLE", &native), "Error translating FP_COMP_OPS_EXE:SSE_FP_SCALAR_SINGLE event name to code\n");
   // print_event_info(native);
-  // add_event(cpu_events, native, &cpu_num_events);
+  //add_event(cpu_events, native, &cpu_num_events);
   
-  // CHECK(PAPI_event_name_to_code("FP_COMP_OPS_EXE:SSE_PACKED_SINGLE", &native), "Error translating FP_COMP_OPS_EXE:SSE_PACKED_SINGLE event name to code\n");
+  //CHECK(PAPI_event_name_to_code("FP_COMP_OPS_EXE:SSE_PACKED_SINGLE", &native), "Error translating FP_COMP_OPS_EXE:SSE_PACKED_SINGLE event name to code\n");
   // print_event_info(native);
-  // add_event(cpu_events, native, &cpu_num_events);
+  //add_event(cpu_events, native, &cpu_num_events);
   
-//  CHECK(PAPI_event_name_to_code("FP_COMP_OPS_EXE:SSE_SCALAR_DOUBLE", &native), "Error translating FP_COMP_OPS_EXE:SSE_SCALAR_DOUBLE  event name to code\n");
-//  print_event_info(native);
-//  add_event(cpu_events, native, &cpu_num_events);
+  //CHECK(PAPI_event_name_to_code("FP_COMP_OPS_EXE:SSE_SCALAR_DOUBLE", &native), "Error translating FP_COMP_OPS_EXE:SSE_SCALAR_DOUBLE  event name to code\n");
+  //print_event_info(native);
+  //add_event(cpu_events, native, &cpu_num_events);
+
+  //CHECK(PAPI_event_name_to_code("PAPI_SP_OPS", &native), "Error translating PAPI_SP_OPS event name to code\n");
+  //print_event_info(native);
+  //add_event(cpu_events, native, &cpu_num_events);
+
+  //CHECK(PAPI_event_name_to_code("PAPI_DP_OPS", &native), "Error translating PAPI_DP_OPS event name to code\n");
+  //print_event_info(native);
+  //add_event(cpu_events, native, &cpu_num_events);
 }
 
 void register_mem_events() {
   int native;
+
   // cpu_events related to cache and memory accesses: 
-  //  iCHECK(PAPI_event_name_to_code("L1D:REPLACEMENT", &native),
-  //  "Error translating L1D:REPLACEMENT event name to code\n");
+  // CHECK(PAPI_event_name_to_code("L1D:REPLACEMENT", &native),
+  // "Error translating L1D:REPLACEMENT event name to code\n");
   // print_event_info(native);
   // add_event(cpu_events, native, &cpu_num_events);
   
@@ -346,7 +355,6 @@ void register_mem_events() {
 
   // print_event_info(native);
   // add_event(cpu_events, native, &cpu_num_events);
-  //
   CHECK(PAPI_event_name_to_code("PAPI_L1_DCM", &native), "Error translating PAPI_L1_DCM event name to code\n");
   //print_event_info(native);
   add_event(cpu_events, native, &cpu_num_events);
@@ -355,17 +363,17 @@ void register_mem_events() {
   //print_event_info(native);
   add_event(cpu_events, native, &cpu_num_events);
 
-  CHECK(PAPI_event_name_to_code("PAPI_L1_LDM", &native), "Error translating PAPI_L1_LDM event name to code\n");
+  //CHECK(PAPI_event_name_to_code("PAPI_L1_LDM", &native), "Error translating PAPI_L1_LDM event name to code\n");
   //print_event_info(native);
-  add_event(cpu_events, native, &cpu_num_events);
+  //add_event(cpu_events, native, &cpu_num_events);
   
-  CHECK(PAPI_event_name_to_code("PAPI_L1_STM", &native), "Error translating PAPI_L1_STM  event name to code\n");
+  //CHECK(PAPI_event_name_to_code("PAPI_L1_STM", &native), "Error translating PAPI_L1_STM  event name to code\n");
   //print_event_info(native);
-  add_event(cpu_events, native, &cpu_num_events);
+  //add_event(cpu_events, native, &cpu_num_events);
   
-  CHECK(PAPI_event_name_to_code("PAPI_L2_STM", &native), "Error translating PAPI_L2_STM  event name to code\n");
+  //CHECK(PAPI_event_name_to_code("PAPI_L2_STM", &native), "Error translating PAPI_L2_STM  event name to code\n");
   //print_event_info(native);
-  add_event(cpu_events, native, &cpu_num_events);
+  //add_event(cpu_events, native, &cpu_num_events);
 }
 
 
