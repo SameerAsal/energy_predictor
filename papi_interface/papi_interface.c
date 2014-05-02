@@ -307,9 +307,9 @@ void register_flop_events() {
   add_event(cpu_events, native, &cpu_num_events);
   
   // SSE + x87.
-  //CHECK(PAPI_event_name_to_code("FP_COMP_OPS_EXE:X87", &native), "Error translating FP_COMP_OS_EXE  event name to code\n");
-  // print_event_info(native);
-  //add_event(cpu_events, native, &cpu_num_events);
+  CHECK(PAPI_event_name_to_code("FP_COMP_OPS_EXE:X87", &native), "Error translating FP_COMP_OS_EXE  event name to code\n");
+  print_event_info(native);
+  add_event(cpu_events, native, &cpu_num_events);
   
   CHECK(PAPI_event_name_to_code("FP_COMP_OPS_EXE:SSE_FP_PACKED_DOUBLE", &native), 
         "Error translating FP_COMP_OPS_EXE:SSE_FP_PACKED_DOUBLE event name to code\n");

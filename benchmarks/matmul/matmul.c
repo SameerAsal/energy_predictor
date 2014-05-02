@@ -4,7 +4,7 @@
 #include <assert.h>
 
 #define M 512
-#define N 3096
+#define N 5096
 #define K 512
 
 #define alpha 1

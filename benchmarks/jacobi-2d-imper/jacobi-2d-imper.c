@@ -4,7 +4,7 @@
 
 #include <assert.h>
 
-#define N 3096
+#define N 5096
 #define T 1000
 #define PERFCTR
 

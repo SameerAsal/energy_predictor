@@ -92,11 +92,11 @@ perf_interface: $(PAPI_INTERFACE)/papi_interface.h $(PAPI_INTERFACE)/papi_interf
 	make -C $(PAPI_INTERFACE) libpapi_interface.a
 
 perf: orig tiled par orig_par
-	rm -f .test
-	./orig
-	OMP_NUM_THREADS=4 ./orig_par
-	./tiled
-	OMP_NUM_THREADS=4 ./par 
+#	rm -f .test
+#	./orig
+#	OMP_NUM_THREADS=4 ./orig_par
+#	./tiled
+#	OMP_NUM_THREADS=4 ./par 
 
 
 test: orig tiled par
