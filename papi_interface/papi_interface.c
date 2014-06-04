@@ -74,7 +74,7 @@ void  print_counters_to_file(char* file_name) {
   FILE* out_file;
   char event_unit[PAPI_MAX_STR_LEN];
   char event_name[PAPI_MAX_STR_LEN];
-  char time_now[100];
+  //char time_now[100];
   BOOL exists = file_exists(file_name); 
 
   if (!exists) {
@@ -104,6 +104,13 @@ void  print_counters_to_file(char* file_name) {
       } 
     }
 
+    if (mic_enabled) {
+      for (idx=0; idx < mic_num_registered_events; idx++) {
+        PAPI_event_code_to_name(mic_events[idx], event_name);
+        fprintf(out_file,"%s\t", event_name);
+      }
+    }
+
     // Add Column for exeution time 
     fprintf(out_file,"%s", "EXEC_TIME");
 
@@ -129,6 +136,18 @@ void  print_counters_to_file(char* file_name) {
         fprintf(out_file,"%f\t", rapl_values[idx]/1.0e09);
       } else {
         fprintf(out_file,"%lld\t",  rapl_values[idx]);
+      }
+    } 
+  }
+
+  if (mic_enabled) {
+    for (idx=0; idx < mic_num_registered_events; idx++) {
+      get_event_unit(mic_events[idx], event_unit);
+      PAPI_event_code_to_name(mic_events[idx], event_name);
+      if (strstr(event_unit,"nJ")) {
+        fprintf(out_file,"%f\t", mic_values[idx]/1.0e09);
+      } else {
+        fprintf(out_file,"%lld\t",  mic_values[idx]);
       }
     } 
   }
@@ -438,8 +457,20 @@ void stop_papi() {
 }
 
 void finalize_native() {
-  CHECK (PAPI_cleanup_eventset(cpu_native_event_set) , "Error cleaning up events !!\n");
-  CHECK (PAPI_destroy_eventset(&cpu_native_event_set), "Error destroying events !!\n");
+  if (cpu_enabled) {
+    CHECK (PAPI_cleanup_eventset(cpu_native_event_set) , "Error cleaning up events !!\n");
+    CHECK (PAPI_destroy_eventset(&cpu_native_event_set), "Error destroying events !!\n");
+  }
+
+  if (rapl_enabled) {
+    CHECK (PAPI_cleanup_eventset(rapl_event_set) , "Error rapl cleaning up events !!\n");
+    CHECK (PAPI_destroy_eventset(&rapl_event_set), "Error rapl destroying events !!\n");
+  }
+
+  if (mic_enabled) {
+    CHECK (PAPI_cleanup_eventset(mic_event_set) , "Error rapl cleaning up events !!\n");
+    CHECK (PAPI_destroy_eventset(&mic_event_set), "Error mic destroying events !!\n"); 
+  }
 }
 
 
@@ -451,10 +482,10 @@ void print_comp_details(const PAPI_component_info_t * cmp) {
   printf ("Kernel Version: %s\n", cmp->kernel_version);
 }
 
-BOOL find_rapl() {
+BOOL find_cmp(char *cmp_name, int* cmp_id) {
   int num_comps; 
   int cid;
-  // First, look for the RAPL component:
+  // First, look for the component:
   num_comps = PAPI_num_components();
   for (cid=0; cid<num_comps; cid++) {
     cmpinfo = PAPI_get_component_info(cid);
@@ -463,11 +494,11 @@ BOOL find_rapl() {
        exit(-1);
     }
 
-    if (strstr(cmpinfo->name,"rapl")) {
-      rapl_cid=cid;
-      printf("Found rapl component at cid %d\n",rapl_cid);
+    if (strstr(cmpinfo->name, cmp_name)) {
+      *cmp_id = cid;
+      printf("Found %s component at cid %d\n", cmp_name, *cmp_id);
       if (cmpinfo->disabled) { 
-        printf("RAPL component disabled: %s\n", cmpinfo->disabled_reason);
+        printf("%s component disabled: %s\n", cmp_name, cmpinfo->disabled_reason);
       } else {
         print_comp_details(cmpinfo); 
         return TRUE;
@@ -477,6 +508,19 @@ BOOL find_rapl() {
   return FALSE;
 }
 
+void list_mic_events() {
+  int code = PAPI_NATIVE_MASK;
+  int    r = PAPI_enum_cmp_event(&code, PAPI_ENUM_EVENTS, mic_cid);
+  mic_events_count = 0;
+  CHECK(r, " PAPI_enum_cmp_events failed\n");
+  
+  // printf("listing RAPL events\n");
+  while (r == PAPI_OK) {
+    mic_events_count++;
+    // print_event_info (code); 
+    r = PAPI_enum_cmp_event(&code, PAPI_ENUM_EVENTS, mic_cid);
+  }
+}
 
 void list_rapl_events() {
   int code = PAPI_NATIVE_MASK;
@@ -496,8 +540,9 @@ void list_rapl_events() {
 void read_config() {
   // Supposedly reading sone hypotheitcal config file that will hopefully 
   // set the values for settings for an illusion of organized code.
-  rapl_enabled = TRUE; 
-  cpu_enabled  = TRUE;
+  rapl_enabled = FALSE; 
+  cpu_enabled  = FALSE;
+  mic_enabled = TRUE;
 }
 
 void register_energy_events() {
@@ -516,8 +561,8 @@ void register_energy_events() {
   // CHECK(PAPI_event_name_to_code("THERMAL_SPEC:PACKAGE0", &native), "Error translating event name to code\n");
   // add_event(rapl_events, native, &rapl_num_registered_events);
   
-  //CHECK(PAPI_event_name_to_code("MSR_PKG_ENERGY_STATUS", &native), "Error translating MSR_PKG_ENERGY_STATUS to numeric code\n");
-  //add_event(rapl_events, native, &rapl_num_registered_events);
+  // CHECK(PAPI_event_name_to_code("MSR_PKG_ENERGY_STATUS", &native), "Error translating MSR_PKG_ENERGY_STATUS to numeric code\n");
+  // add_event(rapl_events, native, &rapl_num_registered_events);
  
   // Now add events to the event set !
   CHECK (PAPI_add_events(rapl_event_set, rapl_events, rapl_num_registered_events), "Error adding events to RAPL EventSet");
@@ -538,6 +583,10 @@ void init_counters() {
   if (cpu_enabled) {
     init_cpu_counters();
   }
+
+  if (mic_enabled) { 
+    init_mic_counters();   
+  }
 }
 
 // Start counting.
@@ -545,8 +594,13 @@ void start_counting() {
   if (rapl_enabled) {
     start_rapl_counting();
   }
+
   if (cpu_enabled) {
     start_cpu_counting();
+  }
+
+  if (mic_enabled) {
+    start_mic_counting();
   }
 }
 // Stop counting.
@@ -554,13 +608,67 @@ void stop_counting() {
   if (rapl_enabled) {
     stop_rapl_counting();
   }
+
   if (cpu_enabled) {
     stop_cpu_counting();
   }
+
+  if (mic_enabled) {
+    stop_mic_counting();
+  }
 }
 
+
+void init_mic_counters() {
+  CHECK_BOOL (find_cmp("host_micpower", &mic_cid), "host_micpower component not found in the system !!");
+  printf ("mic_cid = %i\n", mic_cid);
+  mic_event_set = PAPI_NULL;  
+  list_mic_events();
+  CHECK (PAPI_create_eventset(&mic_event_set), "PAPI_create_event_set for mic_event_set failed !");
+  CHECK (PAPI_assign_eventset_component(mic_event_set, mic_cid),"Assigning mic_event_set to RAPL");
+  // This breaks things when trying to register events in event set. the call reyurns with PAPI_OK though !!
+  // CHECK (PAPI_set_multiplex(rapl_event_set), "PAPI_set_multiplex(rapl_event_set) Failed !!!");
+  
+  mic_values = (long_long*)calloc(mic_events_count, sizeof(long_long));
+  mic_events = (int*)calloc(mic_events_count, sizeof(int));
+  
+  register_mic_energy_events();
+  printf("mic counters initialized \n");
+}
+
+
+void register_mic_energy_events() {
+  int native;
+  rapl_num_registered_events = 0;
+  
+  CHECK(PAPI_event_name_to_code("host_micpower:::mic0:tot0", &native), "Error translating host_micpower:::mic0:tot0 to code\n");
+  add_event(mic_events, native, &mic_num_registered_events);
+
+  CHECK(PAPI_event_name_to_code("host_micpower:::mic0:pcie", &native), "Error translating host_micpower:::mic0:pcie to code\n");
+  add_event(mic_events, native, &mic_num_registered_events);
+
+  // Now add events to the event set !
+  CHECK (PAPI_add_events(mic_event_set, mic_events, mic_num_registered_events), "Error adding events to RAPL EventSet");
+  printf("Events added to event set successfully !!!\n"); 
+}
+
+void start_mic_counting() {
+  //printf ("Start PAPI RAPL events !!\n");
+  CHECK (PAPI_start(mic_event_set), "Error start_mic_counting()\n");
+  printf ("PAPI host_micpower events started !!\n");
+}
+
+
+
+void stop_mic_counting() {
+  printf ("Stop PAPI host_micpower events!!\n");
+  CHECK (PAPI_stop(mic_event_set, mic_values), "Error stop_papi\n");
+  printf ("Stop PAPI host_micpower events done !!\n");
+}
+
+
 void init_rapl_counters() {
-  CHECK_BOOL (find_rapl(), "RAPL component not found in the system !!");
+  CHECK_BOOL (find_cmp("rapl", &rapl_cid), "RAPL component not found in the system !!");
   rapl_event_set = PAPI_NULL;  
   list_rapl_events();
   CHECK (PAPI_create_eventset(&rapl_event_set), "PAPI_create_event_set for RAPL failed !");
@@ -593,7 +701,7 @@ void test() {
   test_papi(); 
   stop_counting();
   print_counters();  
-  print_counters_to_file("rapl+cpu.txt");  
+  print_counters_to_file("micpower+rapl+cpu.txt");  
   
   finalize_native();
   finalize();

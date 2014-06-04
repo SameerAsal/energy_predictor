@@ -21,9 +21,19 @@ long_long *rapl_values;
 int rapl_num_registered_events;
 
 
-// Library settings: 
+// Host_micpowr related events:
+int 	  mic_cid;
+int 	  mic_events_count; 
+int 	  mic_event_set;
+int 	  *mic_events;    // Energy related events we need to subscribe to. 
+long_long *mic_values;
+int mic_num_registered_events;
+
+
+//micpower library settings: 
 BOOL rapl_enabled; 
 BOOL cpu_enabled;
+BOOL mic_enabled;
 
 // Value for timers.
 long_long start_usec, end_usec, total_usec;
@@ -74,15 +84,22 @@ BOOL file_exists(char* name);
 
 // Printing functions:
 void print_counters();
+
 void print_counters_to_file(char*);
 
 void test_papi();
+
 // RAPL + Energy function:
 void test_papi_rapl();
 void init_rapl_counters();
-
 void start_rapl_counting();
 void stop_rapl_counting();
+
+// Host_micpower:
+void init_mic_counters();
+void start_mic_counting();
+void stop_mic_counting();
+void register_mic_energy_events();
 
 // Deprecated: 
 // Can be used to read counters without stopping the counters.Can be only used when the high level API is used, now that 
