@@ -37,7 +37,7 @@ def move_files(kernel_name, directory):
 
 def test_all_versions(to_compose, tokens, text, bench, std_err, std_out):
   name = "./" + bench + "/" + bench  + ".c"
-  pdb.set_trace()
+  #pdb.set_trace()
 
   for e in product(*to_compose):
     solid = text
@@ -55,11 +55,23 @@ def test_all_versions(to_compose, tokens, text, bench, std_err, std_out):
     for exe in varients:
       exe_file =  "./" + bench + "/" + exe
     #Run each 3 times
-      for i in range(0,3): 
-        print "Now executing " + exe_file + " for the " + str(i) + " time !"
-        subprocess.call([exe_file], stderr=std_err, stdout=std_out)
-        print "now sleeping !"
-        time.sleep(30)
+      for i in range(0,3):
+        try:
+          print "Now executing " + exe_file + " for the " + str(i) + " time !"
+          subprocess.call([exe_file], stderr=std_err, stdout=std_out)
+          print "now sleeping !"
+          time.sleep(30)
+        except IOError as err:
+          print "ERRRRRRRRRR "  + "happened ! \n"
+        except OSError as err:
+          print "OSError ERRRRRRRRRR "  + "happened ! \n"
+          print err
+          print exe_file
+          exit(0)
+        except:
+          print "Generic error, what was that !"
+          exit(0)
+           #{0}): {1}".format(e.errno, e.strerror)
       
 
     #make -C ./bench  perf
@@ -67,7 +79,7 @@ def test_all_versions(to_compose, tokens, text, bench, std_err, std_out):
   
 
 def run_tests():
-  benchmarks = {"matmul", "jacobi-1d-imper","jacobi-2d-imper", "adi","lu"}
+  benchmarks = ["matmul", "jacobi-1d-imper","jacobi-2d-imper", "adi","lu"]
 
   n_Values = [128,256,512,1024,2048,3096,5096]
   m_Values = [128,256,348,512]
@@ -86,6 +98,7 @@ def run_tests():
     template = open(name, 'r')
     text = template.read()
     template.close()
+    print "wrote " + name
 
     if not(-1 == text.find(tokens[0])):
       print bench + " " + tokens[0]
@@ -115,6 +128,7 @@ def clean_results():
 
 def main(): 
   clean_results()
+  print "done with clean results"
   run_tests()
  
 if __name__ == "__main__":
