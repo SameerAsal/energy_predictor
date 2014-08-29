@@ -9,6 +9,11 @@ import datetime
 import shutil
 import time 
 import pdb
+from os.path import expanduser
+
+#Passs these arguments to the make perf script !
+PAPI_LIB   = "PAPI_LIB=" + expanduser("~") + "/svn/installations/papi_MIC_5.3_mic_host/lib"
+POLYCC_LIB = "PLC="      + expanduser("~") + "/svn/installations/pluto/polycc"
 
 tokens     = [ "%N_VAL%", "%M_VAL%", "%K_VAL%"]
 
@@ -26,7 +31,6 @@ data_files=["orig_par_timings.txt",\
 
 
 def move_files(kernel_name, directory):
-  
   file_paths = map(lambda file : "./" + kernel_name + "/" +file, data_files)
   dest_paths = map(lambda file : directory + "/" + kernel_name + "_"  + file, data_files)
   for file_path,dest_path  in zip(file_paths, dest_paths):
@@ -49,8 +53,15 @@ def test_all_versions(to_compose, tokens, text, bench, std_err, std_out):
     #Write the filled in template !
     f.close()
     #Now make perf
-    print "now making: " + str(e)
-    subprocess.call(["make", "-C", bench, "perf"], stderr=std_err, stdout=std_out)
+    print "now making: " + str(e) + " for benchmark " + bench
+    try:
+      print subprocess.check_call(["make", "-C", bench, "perf", PAPI_LIB, POLYCC_LIB], stderr=std_err, stdout=std_out)
+      #print subprocess.check_call(["make", "-C", bench, "perf"], stderr=std_err, stdout=std_out)
+    except:
+      print "Error compiling " + bench + " sizes: " + str(e)
+      quit()
+
+
     #Now run each varient of the benchmark separetly, wait 10 escs between each run !
     for exe in varients:
       exe_file =  "./" + bench + "/" + exe
@@ -60,7 +71,7 @@ def test_all_versions(to_compose, tokens, text, bench, std_err, std_out):
           print "Now executing " + exe_file + " for the " + str(i) + " time !"
           subprocess.call([exe_file], stderr=std_err, stdout=std_out)
           print "now sleeping !"
-          time.sleep(30)
+          #time.sleep(30)
         except IOError as err:
           print "ERRRRRRRRRR "  + "happened ! \n"
         except OSError as err:
