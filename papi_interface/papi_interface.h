@@ -1,33 +1,12 @@
+#ifndef __PAPI_INTERFACE_H__ 
+#define __PAPI_INTERFACE_H__
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <papi.h>
 #define BOOL int 
 #define TRUE 1
 #define FALSE 0
-
-// CPU events:
-int 	  cpu_num_events;      // Number of events registered. 
-int       *cpu_events;  // Events we need to subscribe to.
-int       cpu_native_event_set; // The event set we will use
-long_long *cpu_values;  // Values for the performance counters for the events we need to subscribe to.
-                     // used with both native a
-
-// RAPL related events:
-int 	  rapl_cid;
-int 	  rapl_events_count; 
-int 	  rapl_event_set;
-int 	  *rapl_events;    // Energy related events we need to subscribe to. 
-long_long *rapl_values;
-int rapl_num_registered_events;
-
-
-// Host_micpowr related events:
-int 	  mic_cid;
-int 	  mic_events_count; 
-int 	  mic_event_set;
-int 	  *mic_events;    // Energy related events we need to subscribe to. 
-long_long *mic_values;
-int mic_num_registered_events;
 
 
 //micpower library settings: 
@@ -89,19 +68,12 @@ void print_counters_to_file(char*);
 
 void test_papi();
 
-// RAPL + Energy function:
-void test_papi_rapl();
-void init_rapl_counters();
-void start_rapl_counting();
-void stop_rapl_counting();
 
-// Host_micpower:
-void init_mic_counters();
-void start_mic_counting();
-void stop_mic_counting();
-void register_mic_energy_events();
+// Common functionality:
+BOOL find_cmp(char *cmp_name, int* cmp_id);
 
 // Deprecated: 
 // Can be used to read counters without stopping the counters.Can be only used when the high level API is used, now that 
 // We are using multiplexing and other complex features for Multiplexing we can't use it anymore ! 
 //void read_counters();
+#endif
