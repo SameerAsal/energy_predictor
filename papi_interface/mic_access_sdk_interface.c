@@ -42,9 +42,11 @@ void init_mic_access_sdk_counters() {
 }
 
 void* THREAD_read_power(void* args) {
-// Fork a thread instead !!
- printf ("thread starting\n");
-while (read_running) {
+ // Iterate through the list of available cards (referred to as adapters
+ // below), initialize them. Following this, call the API to get uOS
+ // version and then close the adapter.
+ printf ("THREAD_read_power starting\n");
+ while (read_running) {
   for (adapterNum = 0; adapterNum < nAdapters; adapterNum++) {
       // API call example: get and display the power usage.
       retVal = MicGetPowerUsage(accessHandles[adapterNum], &powerUsage);
@@ -55,23 +57,25 @@ while (read_running) {
 	    return NULL;//retVal;
       }
       // Write to an array instead !
-      printf("Current Power Usage: %u\n", powerUsage.total0.prr);
-      power_readings[adapterNum][idx_write] = powerUsage;
+      printf("Current Power Usage total0:\t%u\n", powerUsage.total0.prr);
+      printf("Current Power Usage total1:\t%u\n", powerUsage.total1.prr);
+      printf("Current Power Usage inst:\t%u\n", powerUsage.inst.prr);
+      printf("Current Power Usage pcie:\t%u\n", powerUsage.pcie.prr);
+
+
+      power_readings[adapterNum][idx_write++] = powerUsage;
       if (idx_write > MAX_READINGS) 
       	idx_write = 0;
     }
     // Sleep for 50 ms.
-    usleep(50000);
+    usleep(READ_PERIOD);
   }
 
-  printf ("thread exiting\n");
-  return NULL;
+ printf ("THREAD_read_power exiting\n");
+ return NULL;
 }
 
 void start_mic_access_sdk_counting() {
-  // Iterate through the list of available cards (referred to as adapters
-  // below), initialize them. Following this, call the API to get uOS
-  // version and then close the adapter.
   read_running = TRUE;
   pthread_create(&thread_id, NULL, THREAD_read_power, NULL);
 }
@@ -89,13 +93,47 @@ void stop_mic_access_sdk_counting() {
 	  return ;//retVal;
     }
   }
+  integrate_pwr();
+}
+
+
+void integrate_pwr() {
+  size_t reading_idx;
+  size_t device_idx;
+  uint32_t _total0_energy = 0;
+  uint32_t _total1_energy = 0;
+  uint32_t _pcie_energy   = 0;
+
+  for (device_idx = 0; device_idx < nAdapters; device_idx++) {
+
+    for (reading_idx = 0; reading_idx < idx_write; reading_idx++) {
+      _total0_energy += power_readings[device_idx][reading_idx].total0.prr;
+      _total1_energy += power_readings[device_idx][reading_idx].total1.prr;
+      _pcie_energy   += power_readings[device_idx][reading_idx].pcie.prr;
+    }
+    // Power trported is in Micro Watts.
+    total0_energy = (READ_PERIOD*1.0e-6)*(_total0_energy*1.0e-6);
+    total1_energy = (READ_PERIOD*1.0e-6)*(_total1_energy*1.0e-6);
+    pcie_energy   = (READ_PERIOD*1.0e-6)*(_pcie_energy*1.0e-6);
+
+    // printf ("Device %i:\n", device_idx);    
+    // printf ("\ttotal0_energy =\t%f\n",   (READ_PERIOD*1.0e-6)*total0_energy*1.0e-6);
+    // printf ("\ttotal1_energy =\t%f\n",   (READ_PERIOD*1.0e-6)*total1_energy*1.0e-6);
+    // printf ("\tpcie_energy   =\t%f\n\n", (READ_PERIOD*1.0e-6)*pcie_energy*1.0e-6);
+
+
+    printf ("\ttotal0_energy =\t%f\n", total0_energy);
+    printf ("\ttotal1_energy =\t%f\n", total1_energy);
+    printf ("\tpcie_energy   =\t%f\n"  , pcie_energy);
+  }
+
 }
 
 #ifdef TEST
 int main() {
   init_mic_access_sdk_counters();
   start_mic_access_sdk_counting();
-  usleep(800000);
+  usleep(4000000);
   stop_mic_access_sdk_counting();
 }
 #endif
