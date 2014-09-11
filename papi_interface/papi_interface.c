@@ -3,6 +3,7 @@
 #include "cpu_interface.c"
 #include "rapl_interface.c"
 #include "mic_interface.c"
+#include "mic_access_sdk_interface.c"
 
 void init_library() {
   int retval = PAPI_library_init(PAPI_VER_CURRENT);
@@ -53,7 +54,8 @@ void  print_counters_to_file(char* file_name) {
       fprintf(out_file,"%s\t", event_name);
     }
   }
-    // Add the header for RAPL counters:
+
+  // Add the header for RAPL counters:
   if (rapl_enabled) {
     for (idx=0; idx < rapl_num_registered_events; idx++) {
       get_event_unit(rapl_events[idx], event_unit);
@@ -71,6 +73,16 @@ void  print_counters_to_file(char* file_name) {
       PAPI_event_code_to_name(mic_events[idx], event_name);
       fprintf(out_file,"%s\t", event_name);
     }
+  }
+
+  // double mic_total0_energy;
+  // double mic_total1_energy;
+  // double mic_pcie_energy;
+
+  if (mic_access_sdk_enabled) {  
+    fprintf(out_file,"total0\ttotal1\tpcie\t");
+    //for (idx=0; idx < 3; idx++) {
+    //}
   }
 
     // Add Column for exeution time 
@@ -106,6 +118,13 @@ void  print_counters_to_file(char* file_name) {
       }
     }
   }
+
+
+ if (mic_access_sdk_enabled) {  
+    //fprintf(out_file,"total0\ttotal1\tpcie");
+     fprintf(out_file,"%f\t%f\t%f", mic_total0_energy, mic_total1_energy, mic_pcie_energy);
+  }
+
 
   fprintf(out_file,"%f\n", total_usec/1000.0);
   fclose(out_file);
@@ -146,6 +165,11 @@ void print_counters() {
         printf("%lld\t",  mic_values[idx]);
       }
     }
+  }
+
+  if (mic_access_sdk_enabled) {
+    // Print out all the numbers, add the headers first !
+
   }
 
   printf("%s:\t%f\n", "EXEC_TIME", total_usec/1000.0);
@@ -328,9 +352,10 @@ BOOL find_cmp(char *cmp_name, int* cmp_id) {
 void read_config() {
   // Supposedly reading some hypotheitcal config file that will hopefully 
   // set the values for settings for an illusion of organized code.
-  rapl_enabled = FALSE; 
-  cpu_enabled  = FALSE;
-  mic_enabled  = TRUE;
+  rapl_enabled    = FALSE; 
+  cpu_enabled     = FALSE;
+  mic_enabled     = FALSE;
+  mic_access_sdk_enabled = TRUE;
 }
 
 // Initialize everything
@@ -350,6 +375,10 @@ void init_counters() {
   if (mic_enabled) { 
     init_mic_counters();   
   }
+
+  if (mic_access_sdk_enabled) {
+    init_mic_access_sdk_counters();
+  }
 }
 
 // Start counting.
@@ -365,6 +394,11 @@ void start_counting() {
   if (mic_enabled) {
     start_mic_counting();
   }
+
+  if (mic_access_sdk_enabled) {
+    start_mic_access_sdk_counting();
+  }
+  start_usec =  PAPI_get_real_usec();
 }
 
 // Stop counting.
@@ -380,6 +414,12 @@ void stop_counting() {
   if (mic_enabled) {
     stop_mic_counting();
   }
+
+  if (mic_access_sdk_enabled) {
+    stop_mic_access_sdk_counting();
+  }
+  end_usec = PAPI_get_real_usec();
+  total_usec = end_usec - start_usec;
 }
 
 void test() {    
@@ -389,7 +429,6 @@ void test() {
   stop_counting();
   print_counters();  
   print_counters_to_file("micpower+rapl+cpu.txt");  
-  
   finalize_native();
   finalize();
 }
@@ -405,29 +444,32 @@ void test_papi() {
  int i,j,k;
 
 
-  for(i=0;i<MATRIX_SIZE;i++) {
-    for(j=0;j<MATRIX_SIZE;j++) {
-      a[i][j]=(double)i*(double)j;
-        b[i][j]=(double)i/(double)(j+5);
-    }
-  }
+  // for(i=0;i<MATRIX_SIZE;i++) {
+  //   for(j=0;j<MATRIX_SIZE;j++) {
+  //     a[i][j]=(double)i*(double)j;
+  //       b[i][j]=(double)i/(double)(j+5);
+  //   }
+  // }
 
-  for(j=0;j<MATRIX_SIZE;j++) {
-    for(i=0;i<MATRIX_SIZE;i++) {
-      s=0;
-      for(k=0;k<MATRIX_SIZE;k++) {
-        s+=a[i][k]*b[k][j];
-      }
-      c[i][j] = s;
-     }
-  }
+  // for(j=0;j<MATRIX_SIZE;j++) {
+  //   for(i=0;i<MATRIX_SIZE;i++) {
+  //     s=0;
+  //     for(k=0;k<MATRIX_SIZE;k++) {
+  //       s+=a[i][k]*b[k][j];
+  //     }
+  //     c[i][j] = s;
+  //    }
+  // }
 
-  s=0.0;
-  for(i=0;i<MATRIX_SIZE;i++) {
-    for(j=0;j<MATRIX_SIZE;j++) {
-      s+=c[i][j];
-     }
-   }
+  // s=0.0;
+  // for(i=0;i<MATRIX_SIZE;i++) {
+  //   for(j=0;j<MATRIX_SIZE;j++) {
+  //     s+=c[i][j];
+  //    }
+  //  }
+
+  usleep(5*1e06);
+   // Add a sample to offload the code to mic.
 }
 
 

@@ -12,7 +12,9 @@
 //micpower library settings: 
 BOOL rapl_enabled; 
 BOOL cpu_enabled;
-BOOL mic_enabled;
+BOOL mic_enabled;     // Using the  papi ports for wrapping MICAccessSDK
+BOOL mic_access_sdk_enabled; // Using the MICAcessSDK directly, based on the example: example-powerusage.c
+
 
 // Value for timers.
 long_long start_usec, end_usec, total_usec;

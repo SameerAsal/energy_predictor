@@ -7,18 +7,17 @@ void start_cpu_counting() {
   // TODO: Smarter way to choose based on numnber of counters we are trying to read !
   start_papi();
   // start_counters();  
-  start_usec =  PAPI_get_real_usec();
+  
 }
 
 void stop_cpu_counting() {
   // Decide weather we want to use: 
   // stop_couters OR stop_papi
-  end_usec = PAPI_get_real_usec();
+  
   // TODO: Smarter way to choose based on number of counters we are trying to read !
   // If we are using Multiplexing (because we need to count more events that the number of
   // counting registers we have). 
-  stop_papi();
-  total_usec = end_usec - start_usec;
+  stop_papi();  
 }
 
 void start_counters() {

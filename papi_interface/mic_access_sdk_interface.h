@@ -1,7 +1,7 @@
 #define MAX_DEVICES		(2)
 #define MAX_READINGS    (1000)
 // Read period in Micro seconds.
-#define READ_PERIOD     (50000)
+#define READ_PERIOD     (50*1000)
 
 #include "Types.h"
 #include "MicAccessTypes.h"
@@ -11,6 +11,8 @@
 #include "MicPowerManagerAPI.h"
 
 #include <pthread.h>
+
+#include <unistd.h>
 
 #include "papi_interface.h"
 
@@ -32,9 +34,9 @@ void* THREAD_read_power(void* args);
 // Integrated Energy values:
 void integrate_pwr();
 
-double total0_energy;
-double total1_energy;
-double pcie_energy;
+double mic_total0_energy;
+double mic_total1_energy;
+double mic_pcie_energy;
 
 // uint32_t total0_energy;
 // uint32_t total1_energy;
