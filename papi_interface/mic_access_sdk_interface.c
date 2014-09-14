@@ -45,6 +45,7 @@ void* THREAD_read_power(void* args) {
  // Iterate through the list of available cards (referred to as adapters
  // below), initialize them. Following this, call the API to get uOS
  // version and then close the adapter.
+ usleep(2*READ_PERIOD);
  printf ("THREAD_read_power starting\n");
  while (read_running) {
   for (adapterNum = 0; adapterNum < nAdapters; adapterNum++) {
@@ -63,8 +64,10 @@ void* THREAD_read_power(void* args) {
       // printf("Current Power Usage pcie:\t%u\n", powerUsage.pcie.prr);
 
       power_readings[adapterNum][idx_write++] = powerUsage;
-      if (idx_write > MAX_READINGS) 
+      if (idx_write >= MAX_READINGS) { 
       	idx_write = 0;
+      }
+
     }
     // Sleep for 50 ms.
     usleep(READ_PERIOD);

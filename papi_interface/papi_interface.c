@@ -122,7 +122,7 @@ void  print_counters_to_file(char* file_name) {
 
  if (mic_access_sdk_enabled) {  
     //fprintf(out_file,"total0\ttotal1\tpcie");
-     fprintf(out_file,"%f\t%f\t%f", mic_total0_energy, mic_total1_energy, mic_pcie_energy);
+     fprintf(out_file,"%f\t%f\t%f\t", mic_total0_energy, mic_total1_energy, mic_pcie_energy);
   }
 
 
@@ -468,7 +468,7 @@ void test_papi() {
   //    }
   //  }
 
-  usleep(5*1e06);
+  usleep(20.56*1e06);
    // Add a sample to offload the code to mic.
 }
 

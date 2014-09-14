@@ -1,0 +1,20 @@
+
+*MIC* Begin optimization report for: main(int, char **)
+
+    Report from: Offload optimizations [offload]
+
+OFFLOAD:main(58,3):  Outlined offload region
+ Data received by target from host
+       c, pointer to data with element count specified in pragma
+       a, pointer to data with element count specified in pragma
+       b, pointer to data with element count specified in pragma
+       i, scalar size 4 bytes
+       j, scalar size 4 bytes
+       k, scalar size 4 bytes
+ Data sent from target to host
+       c, pointer to data with element count specified in pragma
+       i, scalar size 4 bytes
+       j, scalar size 4 bytes
+       k, scalar size 4 bytes
+
+===========================================================================
