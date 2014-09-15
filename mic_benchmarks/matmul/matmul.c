@@ -3,9 +3,9 @@
 #include <math.h>
 #include <assert.h>
 
-#define M 512
-#define N 5096
-#define K 512
+#define M 128
+#define N 128
+#define K 128
 
 #define alpha 1
 #define beta 1
@@ -13,21 +13,15 @@
 #define PERFCTR
 
 #pragma declarations
-double A[M][K];
-double B[K][N];
-double C[M][N];
+__attribute__ ((target(mic))) double A[M][K];
+__attribute__ ((target(mic))) double B[K][N];
+__attribute__ ((target(mic))) double C[M][N];
 #pragma enddeclarations
 
 #ifdef PERFCTR
-
-
-#pragma offload_attribute (push,target(mic))
-#include "papi.h"
-#pragma offload_attribute (pop)
-//#include <papi.h>
+#include <papi.h>
 #include "papi_interface.h"
 #include "papi_defs.h"
-
 #endif
 
 #include "util.h"
@@ -37,9 +31,6 @@ double t_start, t_end;
 int main(int argc, char** argv) {
 
   int i, j, k;
-  double* a = (double *) malloc( (size_t) N*K*sizeof(double) );
-  double* b = (double *) malloc( (size_t) K*N*sizeof(double) );
-  double* c = (double *) malloc( (size_t) N*M*sizeof(double) );
   init_array();
   char size_string[100];
 
@@ -50,23 +41,18 @@ int main(int argc, char** argv) {
   IF_TIME(t_start = rtclock());
 
   #ifdef PERFCTR
-  // reset_count_registers(); 
+  //reset_count_registers();
   #endif
 
+#pragma offload target (mic) inout(A,B,C)
+{
   #pragma scop
-  //#pragma offload target(mic:0)  inout(C: length(morder*morder)) , in(A: length(M*K)) , in(B: length(K*N))
-  #pragma offload target(mic:0)  inout(c: length(M*K)) , in(a: length(M*K)) , in(b: length(K*N))
-  {
     for(i=0; i<M; i++)
         for(j=0; j<N; j++)  
-            for(k=0; k<K; k++) {
-//                C[i][j] = C[i][j] + A[i][k] * B[k][j];
-    a[i] += b[i] * c[i];
-//    A[i][i] += B[i] * C[i][i];
-    }
-
-  }
+            for(k=0; k<K; k++)
+                C[i][j] = C[i][j] + A[i][k] * B[k][j];
   #pragma endscop
+}
 
   #ifdef PERFCTR
     sprintf(size_string,"%s_(%i,%i,%i)",argv[0],N,M,K);

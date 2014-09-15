@@ -13,9 +13,9 @@
 #define PERFCTR
 
 #pragma declarations
-double A[M][K];
-double B[K][N];
-double C[M][N];
+__attribute__ ((target(mic))) double A[M][K];
+__attribute__ ((target(mic))) double B[K][N];
+__attribute__ ((target(mic))) double C[M][N];
 #pragma enddeclarations
 
 #ifdef PERFCTR
@@ -41,15 +41,18 @@ int main(int argc, char** argv) {
   IF_TIME(t_start = rtclock());
 
   #ifdef PERFCTR
-  // reset_count_registers(); 
+  //reset_count_registers();
   #endif
 
+#pragma offload target (mic) inout(A,B,C)
+{
   #pragma scop
     for(i=0; i<M; i++)
         for(j=0; j<N; j++)  
             for(k=0; k<K; k++)
                 C[i][j] = C[i][j] + A[i][k] * B[k][j];
   #pragma endscop
+}
 
   #ifdef PERFCTR
     sprintf(size_string,"%s_(%i,%i,%i)",argv[0],N,M,K);

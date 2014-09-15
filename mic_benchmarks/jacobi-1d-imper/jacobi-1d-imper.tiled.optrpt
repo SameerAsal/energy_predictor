@@ -5,10 +5,10 @@
 
 OFFLOAD:main(65,1):  Outlined offload region
  Data received by target from host
-       a_V$4, array size 40768 bytes
-       b_V$5, array size 40768 bytes
+       a_V$4, array size 10436608 bytes
+       b_V$5, array size 10436608 bytes
  Data sent from target to host
-       a_V$4, array size 40768 bytes
-       b_V$5, array size 40768 bytes
+       a_V$4, array size 10436608 bytes
+       b_V$5, array size 10436608 bytes
 
 ===========================================================================

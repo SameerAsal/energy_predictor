@@ -16,8 +16,8 @@
 
 
 #pragma declarations
-double a[N];
-double b[N];
+__attribute__ ((target(mic))) double a[N];
+__attribute__ ((target(mic))) double b[N];
 #pragma enddeclarations
 
 double t_start, t_end;
@@ -54,7 +54,8 @@ int main(int argc,char** argv )
 #ifdef PERFCTR
    PERF_INIT();
 #endif
-
+#pragma offload target(mic) inout(a,b)
+{
 #pragma scop
     for (t = 0; t < T; t++) {
         for (i = 2; i < N - 1; i++) {
@@ -65,7 +66,7 @@ int main(int argc,char** argv )
         }
     }
 #pragma endscop
-
+}
 #ifdef PERFCTR
    PERF_EXIT(argv[0]);
 #endif

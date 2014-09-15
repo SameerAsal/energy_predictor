@@ -19,7 +19,12 @@
 #define TMAX T
 #define NMAX N
 
-static double X[NMAX][NMAX+13], A[NMAX][NMAX+23], B[NMAX][NMAX+37];
+//static double X[NMAX][NMAX+13], A[NMAX][NMAX+23], B[NMAX][NMAX+37];
+
+
+__attribute__ ((target(mic))) double X[NMAX][NMAX+13];
+__attribute__ ((target(mic))) double A[NMAX][NMAX+13];
+__attribute__ ((target(mic))) double B[NMAX][NMAX+13];
 
 #include "util.h"
 
@@ -43,10 +48,11 @@ int main(int argc, char** argv)
 #ifdef PERFCTR
     PERF_INIT(); 
 #endif
-
+#pragma ofload target(mic) inout(X,A,B)
+{
 #pragma scop
-    for (t = 0; t < T; t++) {
-
+    for (t = 0; t < T; t++) 
+    {
         for (i1=0; i1<N; i1++) {
             for (i2 = 1; i2 < N; i2++) {
                 X[i1][i2] = X[i1][i2] - X[i1][i2-1] * A[i1][i2] / B[i1][i2-1]; // S1
@@ -62,7 +68,7 @@ int main(int argc, char** argv)
         }
     }
 #pragma endscop
-
+}
 #ifdef PERFCTR
     PERF_EXIT(argv[0]); 
 #endif

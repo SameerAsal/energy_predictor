@@ -4,7 +4,7 @@
 
 #include "util.h"
 
-#define N 5096
+#define N 16*16*5096
 #define T 1000
 
 
