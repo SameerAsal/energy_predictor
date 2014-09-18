@@ -3,6 +3,7 @@
 *.out
 *.*optrpt
 *.*asm
+std.err.out
 *parsetab.py
 mic_benchmarks/*/*.*c
 benchmarks/*/*.*c
