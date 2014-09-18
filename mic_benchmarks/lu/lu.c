@@ -11,12 +11,12 @@
 // Replace the variable 
 #define N 5096
 
-#pragma declarations
-double a[N][N];
+//#pragma declarations
+__attribute__ ((target(mic))) double a[N][N];
 //double v_a[32][35];
 //double v_b[32][32];
 //double v_c[32][33];
-#pragma enddeclarations
+//#pragma enddeclarations
 
 #include <unistd.h>
 #include <sys/time.h>
@@ -82,7 +82,8 @@ int main(int argc, char** argv)
 #ifdef PERFCTR
     PERF_INIT();
 #endif
-
+#pragma offload target(mic) inout(a) 
+{
 #pragma scop
   for (k=0; k<N; k++) {
 
@@ -97,7 +98,7 @@ int main(int argc, char** argv)
      }
    }
 #pragma endscop
-
+}
 #ifdef PERFCTR
     PERF_EXIT(argv[0]);
 #endif

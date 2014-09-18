@@ -15,10 +15,10 @@
 #endif
 
 
-#pragma declarations
+//#pragma declarations
 __attribute__ ((target(mic))) double a[N];
 __attribute__ ((target(mic))) double b[N];
-#pragma enddeclarations
+//#pragma enddeclarations
 
 double t_start, t_end;
 

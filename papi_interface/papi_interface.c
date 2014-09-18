@@ -119,12 +119,10 @@ void  print_counters_to_file(char* file_name) {
     }
   }
 
-
  if (mic_access_sdk_enabled) {  
     //fprintf(out_file,"total0\ttotal1\tpcie");
      fprintf(out_file,"%f\t%f\t%f\t", mic_total0_energy, mic_total1_energy, mic_pcie_energy);
   }
-
 
   fprintf(out_file,"%f\n", total_usec/1000.0);
   fclose(out_file);
@@ -494,4 +492,3 @@ int main() {
   return 0;
 }
 #endif
-

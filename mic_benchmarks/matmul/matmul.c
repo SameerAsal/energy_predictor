@@ -3,20 +3,20 @@
 #include <math.h>
 #include <assert.h>
 
-#define M 128
-#define N 128
-#define K 128
+#define M 512
+#define N 5096
+#define K 512
 
 #define alpha 1
 #define beta 1
 
 #define PERFCTR
 
-#pragma declarations
+//#pragma declarations
 __attribute__ ((target(mic))) double A[M][K];
 __attribute__ ((target(mic))) double B[K][N];
 __attribute__ ((target(mic))) double C[M][N];
-#pragma enddeclarations
+//#pragma enddeclarations
 
 #ifdef PERFCTR
 #include <papi.h>

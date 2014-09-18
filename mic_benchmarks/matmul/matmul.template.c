@@ -12,11 +12,11 @@
 
 #define PERFCTR
 
-#pragma declarations
+//#pragma declarations
 __attribute__ ((target(mic))) double A[M][K];
 __attribute__ ((target(mic))) double B[K][N];
 __attribute__ ((target(mic))) double C[M][N];
-#pragma enddeclarations
+//#pragma enddeclarations
 
 #ifdef PERFCTR
 #include <papi.h>

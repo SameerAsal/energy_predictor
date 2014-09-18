@@ -9,6 +9,11 @@ import datetime
 import shutil
 import time 
 import pdb
+from os.path import expanduser
+
+#Passs these arguments to the make perf script !
+PAPI_LIB   = "PAPI_LIB=" + expanduser("~") + "/svn/installations/papi_MIC_5.3_mic_host/lib"
+POLYCC_LIB = "PLC="      + expanduser("~") + "/svn/installations/pluto/polycc"
 
 tokens     = [ "%N_VAL%", "%M_VAL%", "%K_VAL%"]
 
@@ -26,7 +31,6 @@ data_files=["orig_par_timings.txt",\
 
 
 def move_files(kernel_name, directory):
-  
   file_paths = map(lambda file : "./" + kernel_name + "/" +file, data_files)
   dest_paths = map(lambda file : directory + "/" + kernel_name + "_"  + file, data_files)
   for file_path,dest_path  in zip(file_paths, dest_paths):
@@ -37,8 +41,7 @@ def move_files(kernel_name, directory):
 
 def test_all_versions(to_compose, tokens, text, bench, std_err, std_out):
   name = "./" + bench + "/" + bench  + ".c"
-  pdb.set_trace()
-
+  #pdb.set_trace()
   for e in product(*to_compose):
     solid = text
     for i in range (0 , len(e)):       
@@ -49,17 +52,36 @@ def test_all_versions(to_compose, tokens, text, bench, std_err, std_out):
     #Write the filled in template !
     f.close()
     #Now make perf
-    print "now making: " + str(e)
-    subprocess.call(["make", "-C", bench, "perf"], stderr=std_err, stdout=std_out)
+    print "now making: " + str(e) + " for benchmark " + bench
+    try:
+      print subprocess.check_call(["make", "-C", bench, "perf", PAPI_LIB, POLYCC_LIB], stderr=std_err, stdout=std_out)
+      #print subprocess.check_call(["make", "-C", bench, "perf"], stderr=std_err, stdout=std_out)
+    except:
+      print "Error compiling " + bench + " sizes: " + str(e)
+      quit()
+
+
     #Now run each varient of the benchmark separetly, wait 10 escs between each run !
     for exe in varients:
       exe_file =  "./" + bench + "/" + exe
     #Run each 3 times
-      for i in range(0,3): 
-        print "Now executing " + exe_file + " for the " + str(i) + " time !"
-        subprocess.call([exe_file], stderr=std_err, stdout=std_out)
-        print "now sleeping !"
-        time.sleep(30)
+      for i in range(0,3):
+        try:
+          print "Now executing " + exe_file + " for the " + str(i) + " time !"
+          subprocess.call([exe_file], stderr=std_err, stdout=std_out)
+          print "now sleeping !"
+          #time.sleep(30)
+        except IOError as err:
+          print "ERRRRRRRRRR "  + "happened ! \n"
+        except OSError as err:
+          print "OSError ERRRRRRRRRR "  + "happened ! \n"
+          print err
+          print exe_file
+          exit(0)
+        except:
+          print "Generic error, what was that !"
+          exit(0)
+           #{0}): {1}".format(e.errno, e.strerror)
       
 
     #make -C ./bench  perf
@@ -67,7 +89,7 @@ def test_all_versions(to_compose, tokens, text, bench, std_err, std_out):
   
 
 def run_tests():
-  benchmarks = {"matmul", "jacobi-1d-imper","jacobi-2d-imper", "adi","lu"}
+  benchmarks = ["matmul", "jacobi-1d-imper","jacobi-2d-imper", "adi","lu"]
 
   n_Values = [128,256,512,1024,2048,3096,5096]
   m_Values = [128,256,348,512]
@@ -86,6 +108,7 @@ def run_tests():
     template = open(name, 'r')
     text = template.read()
     template.close()
+    print "wrote " + name
 
     if not(-1 == text.find(tokens[0])):
       print bench + " " + tokens[0]
@@ -115,7 +138,9 @@ def clean_results():
 
 def main(): 
   clean_results()
+  print "done with clean results"
   run_tests()
  
 if __name__ == "__main__":
     main()
+

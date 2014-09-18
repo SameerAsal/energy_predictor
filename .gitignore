@@ -1,4 +1,8 @@
 *.txt
 *.*swp
 *.out
-
+*.*optrpt
+*.*asm
+*parsetab.py
+mic_benchmarks/*/*.*c
+benchmarks/*/*.*c

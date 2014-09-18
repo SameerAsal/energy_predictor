@@ -14,14 +14,13 @@
 //#include "decls.h"
 
 #define T 500
-#define N 5000
+#define N 5096
 
 #define TMAX T
 #define NMAX N
 
-// double X[NMAX][NMAX+13], A[NMAX][NMAX+23], B[NMAX][NMAX+37];
-//double X[NMAX], A[NMAX], B[NMAX];
-//double X, A, B;
+//static double X[NMAX][NMAX+13], A[NMAX][NMAX+23], B[NMAX][NMAX+37];
+
 
 __attribute__ ((target(mic))) double X[NMAX][NMAX+13];
 __attribute__ ((target(mic))) double A[NMAX][NMAX+13];
@@ -39,32 +38,36 @@ int main(int argc, char** argv)
 
     init_array();
 
+
     IF_TIME(t_start = rtclock());
+
+#ifdef PERFCTR
+//    reset_count_registers(); 
+#endif
 
 #ifdef PERFCTR
     PERF_INIT(); 
 #endif
-
-// #pragma offload target(mic) in(X), in(B), in(A), out(X,B)
-#pragma offload target(mic) in(X,B,A), out(X,B)
+#pragma ofload target(mic) inout(X,A,B)
 {
-  #pragma scop
-     for (t = 0; t < T; t++) {
+#pragma scop
+    for (t = 0; t < T; t++) 
+    {
         for (i1=0; i1<N; i1++) {
             for (i2 = 1; i2 < N; i2++) {
                 X[i1][i2] = X[i1][i2] - X[i1][i2-1] * A[i1][i2] / B[i1][i2-1]; // S1
-                B[i1][i2] = B[i1][i2] - A[i1][i2  ] * A[i1][i2] / B[i1][i2-1]; // S2
+                B[i1][i2] = B[i1][i2] - A[i1][i2] * A[i1][i2] / B[i1][i2-1];   // S2
             }
         }
 
         for (i1=1; i1<N; i1++) {
             for (i2 = 0; i2 < N; i2++) {
                 X[i1][i2] = X[i1][i2] - X[i1-1][i2] * A[i1][i2] / B[i1-1][i2]; // S3
-                B[i1][i2] = B[i1][i2] - A[i1  ][i2] * A[i1][i2] / B[i1-1][i2]; // S4
+                B[i1][i2] = B[i1][i2] - A[i1][i2] * A[i1][i2] / B[i1-1][i2];   // S4
             }
         }
-     }
-  #pragma endscop
+    }
+#pragma endscop
 }
 #ifdef PERFCTR
     PERF_EXIT(argv[0]); 
@@ -79,4 +82,3 @@ int main(int argc, char** argv)
     }
     return 0;
 }
-

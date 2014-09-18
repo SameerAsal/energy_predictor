@@ -4,7 +4,7 @@
 
 #include "util.h"
 
-#define N 16*16*5096
+#define N 5096
 #define T 1000
 
 
@@ -18,8 +18,6 @@
 //#pragma declarations
 __attribute__ ((target(mic))) double a[N];
 __attribute__ ((target(mic))) double b[N];
-// double a[N];
-// double b[N];
 //#pragma enddeclarations
 
 double t_start, t_end;
