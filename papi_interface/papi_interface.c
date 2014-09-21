@@ -36,12 +36,13 @@ void  print_counters_to_file(char* file_name) {
  // if (!exists) {
  // if (TRUE) {
   if (exists) {
-    printf("file already exists open for append !!\n");
+    fprintf(stdout, "file already exists open for append !!\n");
     out_file = fopen(file_name, "a");
   }  else {
-    printf("file doesn't exists open for first time !!\n");
+    fprintf(stdout, "file doesn't exists open for first time !!\n");
     out_file = fopen(file_name, "w");
   }
+
   get_time(time_now);
   fprintf(out_file, "%s\t\n", time_now);
   // Add column for time stamp
@@ -89,6 +90,8 @@ void  print_counters_to_file(char* file_name) {
   fprintf(out_file,"%s", "EXEC_TIME");
   fprintf(out_file, "\n");
 
+
+  // Print out the data here !
   if (cpu_enabled) {
     for (idx=0; idx < cpu_num_events; idx++) {
       fprintf(out_file,"%lld\t", cpu_values[idx]);
@@ -167,7 +170,6 @@ void print_counters() {
 
   if (mic_access_sdk_enabled) {
     // Print out all the numbers, add the headers first !
-
   }
 
   printf("%s:\t%f\n", "EXEC_TIME", total_usec/1000.0);
