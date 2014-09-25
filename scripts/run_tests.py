@@ -19,8 +19,8 @@ POLYCC_LIB   = "PLC="      + expanduser("~") + "/svn/installations/pluto/polycc"
 base         = "../benchmarks/"
 dbname       = "NONAME"
 mic_run_data = " total0 REAL, total1 REAL, pcie REAL, EXEC_TIME REAL"
+cpu_run_data = ""
 
-#Global Variables
 conn = ""
 
 #Not from config file:
@@ -37,7 +37,7 @@ data_files=["orig_par_timings.txt",\
             "tiled_timings.txt" ]
 
 # Dictionary of key value data followed by 
-def insert_run_info(kernel_config_id , output_file_path):
+def insert_mic_run_info(kernel_config_id , output_file_path):
  #open the file and read last two lines 
  output = open(output_file_path, "r")
  lines  = output.readlines()
@@ -73,12 +73,10 @@ def insert_run_info(kernel_config_id , output_file_path):
  return  
 
 def insert_kernel_config(kernel_name, sizez):
- 
-
   size_m = "-1"
   size_k = "-1"
 
-  #First query the connection for
+  #First query the connection for this same config
   query = "select rowid from kernel_config where kernel_name = \"" + kernel_name + "\"  and size_n = " + str(sizez[0])
   if (len(sizez) > 1):
     query  = query + " AND  size_m = " + str(sizez[1])
@@ -109,29 +107,48 @@ def insert_kernel_config(kernel_name, sizez):
   print data[0][0]
   return data[0][0]
 
-  
+
+def table_exists(conn, table_name):
+  exists = "select * from  sqlite_master WHERE type='table' AND name = '" + table_name + "'"
+  cur    = conn.cursor()
+  cur.execute(exists)
+  return (not (len(cur.fetchall()) == 0))
 
 def create_db():
  global dbname
+
  dbpath = "./" + dbname + ".db"
  if os.path.exists(dbpath):
    print "database existed, deleting !"
    os.remove(dbpath)
  
  #Create a connection and create the database
+ create_query = ""
  conn   = sqlite3.connect(dbpath)
- #kernel_config = "create table kernel_config (id INTEGER primary key ASC AUTOINCREMENT, kernel_name TEXT ," \
- kernel_config = "create table kernel_config (kernel_name TEXT ," \
-                 "size_n  INTEGER, size_m  INTEGER, size_k  INTEGER)"
- 
- #mic_run  = "create table mic_run  (id INTEGER primary key," + mic_run_data + "," \
- mic_run  = "create table mic_run  (" + mic_run_data + "," \
-            "kernel_config_id INTEGER, FOREIGN KEY(kernel_config_id) REFERENCES kernel_config(ROWID))"
- 
- #One more table for CPU runs
- conn.execute(kernel_config)
- conn.execute(mic_run)
- conn.commit()
+
+ if (not table_exists(conn, "kernel_config")):
+   print "Will create kernel_config"
+   create_query = "create table kernel_config (kernel_name TEXT ," \
+                  "size_n  INTEGER, size_m  INTEGER, size_k  INTEGER);\n"
+   conn.execute(create_query)
+   conn.commit()
+
+ if (not table_exists(conn, "mic_run")):
+   print "Will create mic_run"
+   create_query  = "create table mic_run  (" + mic_run_data + "," \
+              "kernel_config_id INTEGER, FOREIGN KEY(kernel_config_id) REFERENCES kernel_config(ROWID));\n"
+   conn.execute(create_query)
+   conn.commit()
+
+ if (not table_exists(conn, "cpu_run")):
+   print "Will create cou_run"
+   create_query  = "create table cpu_run  (" + cpu_run_data + "," \
+              "kernel_config_id INTEGER, FOREIGN KEY(kernel_config_id) REFERENCES kernel_config(ROWID));\n"
+   conn.execute(create_query)
+   conn.commit()
+
+
+ print " hererererere "
  return conn
 
 def read_config(): 
@@ -143,6 +160,7 @@ def read_config():
   global base
   global dbname
   global mic_run_data
+  global cpu_run_data
 
 
   PAPI_LIB   = "PAPI_LIB=" + config.get("LIBS", "PAPI_LIB")
@@ -177,9 +195,7 @@ def test_all_versions(to_compose, tokens, text, bench, std_err, std_out):
     #Now make perf    
     print "now making: " + str(e) + " for benchmark " + bench
     try:
-      #print subprocess.check_call(["make", "-C", base + bench, "perf", PAPI_LIB, POLYCC_LIB], stderr=std_err, stdout=std_out)
-      print "ak"
-      #print subprocess.check_call(["make", "-C", bench, "perf"], stderr=std_err, stdout=std_out)
+      print subprocess.check_call(["make", "-C", base + bench, "perf", PAPI_LIB, POLYCC_LIB], stderr=std_err, stdout=std_out)
     except ValueError:
       print "Error compiling " + bench + " sizes: " + str(e)
       print ValueError
@@ -196,8 +212,7 @@ def test_all_versions(to_compose, tokens, text, bench, std_err, std_out):
         try:
           print "Now executing " + exe_file + " for the " + str(i) + " time "
           subprocess.check_call([exe_file], stderr=std_err, stdout=std_out)
-          insert_run_info(kernel_config_id, output_file_path)
-          #quit()  
+          insert_mic_run_info(kernel_config_id, output_file_path)
           print "now sleeping !"
           time.sleep(3)
         except IOError as err:
@@ -270,6 +285,7 @@ def main():
   global conn
   read_config()
   conn = create_db()
+  quit()
   clean_results()
   run_tests()
  

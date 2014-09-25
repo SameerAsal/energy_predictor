@@ -49,10 +49,10 @@ void register_rapl_energy_events() {
   int native;
   rapl_num_registered_events = 0;
   
-  CHECK(PAPI_event_name_to_code("rapl:::PACKAGE_ENERGY:PACKAGE0", &native), "Error translating event name to code\n");
+  CHECK(PAPI_event_name_to_code("rapl:::PACKAGE_ENERGY:PACKAGE0", &native), "Error translating event name to code: rapl:::PACKAGE_ENERGY:PACKAGE0 \n");
   add_event(rapl_events, native, &rapl_num_registered_events);
 
-  CHECK(PAPI_event_name_to_code("rapl:::PP1_ENERGY:PACKAGE0", &native), "Error translating event name to code\n");
+  CHECK(PAPI_event_name_to_code("rapl:::PP1_ENERGY:PACKAGE0", &native), "Error translating event name to code: rapl:::PP1_ENERGY:PACKAGE0\n");
   add_event(rapl_events, native, &rapl_num_registered_events);
   
   CHECK(PAPI_event_name_to_code("rapl:::PP0_ENERGY:PACKAGE0", &native), "Error translating rapl:::PP0_ENERGY_CNT:PACKAGE0\n");
