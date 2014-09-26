@@ -46,13 +46,13 @@ void* THREAD_read_power(void* args) {
  // below), initialize them. Following this, call the API to get uOS
  // version and then close the adapter.
  usleep(2*READ_PERIOD);
- printf ("THREAD_read_power starting\n");
+ fprintf (stderr, "THREAD_read_power starting\n");
  while (read_running) {
   for (adapterNum = 0; adapterNum < nAdapters; adapterNum++) {
       // API call example: get and display the power usage.
       retVal = MicGetPowerUsage(accessHandles[adapterNum], &powerUsage);
       if (retVal != MIC_ACCESS_API_SUCCESS) {
-	    printf("%s\n", MicGetErrorString(retVal));
+	    fprintf(stderr, "%s\n", MicGetErrorString(retVal));
 	    MicCloseAdapter(accessHandle);
 	    MicCloseAPI(&accessHandle);
 	    return NULL;//retVal;
@@ -73,7 +73,7 @@ void* THREAD_read_power(void* args) {
     usleep(READ_PERIOD);
   }
 
- printf ("THREAD_read_power exiting\n");
+ fprintf (stderr, "THREAD_read_power exiting\n");
  return NULL;
 }
 

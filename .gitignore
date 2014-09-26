@@ -5,7 +5,11 @@
 *.*asm
 *.vim
 std.err.out
+std.err
+difff*
 *parsetab.py
 poly_predictor_runs.db
 mic_benchmarks/*/*.*c
 benchmarks/*/*.*c
+poly_predictor_runs_safe.db
+rodinia_benchmarks/

@@ -5,7 +5,7 @@
 #
 BASEDIR=$(dir $(lastword $(MAKEFILE_LIST)))
 
-override CC = icc 
+override CC = gcc 
 
 NPROCS=4
 NTHREADS=4
@@ -23,26 +23,25 @@ ACML=/usr/local/acml
 #PAR_FLAGS_GCC:=-ftree-parallelize-loops=4
 #OMP_FLAGS_GCC:=-fopenmp
 
-OPT_FLAGS :=-O3 -fp-model precise -xavx
-PAR_FLAGS := -parallel
-OMP_FLAGS := -openmp
+ifeq ($(CC), icc)
+	OPT_FLAGS :=-O3 -fp-model precise -xavx
+	PAR_FLAGS := -parallel
+	OMP_FLAGS := -openmp
+else
+	#OPT_FLAGS := -O3 -ftree-vectorize -msse3 
+	OPT_FLAGS := -O3 -ftree-vectorize -mavx
+	PAR_FLAGS := -ftree-parallelize-loops=4
+	OMP_FLAGS := -fopenmp
+endif
 
-CFLAGS+=-DTIME -O3 -xhost -opt-report-phase=offload
 
-#MicAccessSdk related includes and libraries. 
-MIC_INC=-I/usr/include/CommonMic -I/usr/include/API/public
-MIC_LIB=-L/usr/lib64/  -lMicAccessSDK -lscif -lODMDebug -lpthread
-
-#PAPI related inludes and librries:
-PAPI_INSTALL=/home/sabuas1/svn/installations/papi_MIC_5.3_mic_host
-PAPI_LIB=$(PAPI_INSTALL)/lib
+CFLAGS+=-DTIME
+PAPI_INSTALL=
+PAPI_LIB=
 PAPI_INC=$(PAPI_INSTALL)/include
 PAPI_INTERFACE=../../papi_interface
-
-LDFLAGS += -lm -lpapi -lpapi_interface -L$(PAPI_LIB) -L$(PAPI_INTERFACE) $(MIC_LIB)
-#LDFLAGS +=  -lpapi_interface -L$(PAPI_INTERFACE) -lpapi -lm
-#LDFLAGS +=  -lpapi_interface -L$(PAPI_INTERFACE) -lpapi -lm  -offload-attribute-target=mic
-
+#LDFLAGS += -lm -lpapi -lpapi_interface -L$(PAPI_LIB) -L$(PAPI_INTERFACE)
+LDFLAGS +=  -lpapi_interface -L$(PAPI_INTERFACE) -lpapi -lm
 INC_FLAGS = -I$(PAPI_INC) -I$(PAPI_INTERFACE)
 PLCFLAGS +=
 TILEFLAGS += 
@@ -54,7 +53,7 @@ ifdef PERFCTR
 endif
 
 # Path to pluto instalation:
-PLC=/home/sabuas1/svn/installations/pluto/polycc
+PLC=/home/sameer/svn/installations/pluto/bin/polycc
 
 all: orig tiled par
 
@@ -63,30 +62,31 @@ $(SRC).opt.c:  $(SRC).c
 	sudo setcap cap_sys_rawio=ep $@
 $(SRC).tiled.c:  $(SRC).c
 	$(PLC) $(SRC).c --tile $(TILEFLAGS) $(PLCFLAGS)  -o $@
-	#sudo setcap cap_sys_rawio=ep $@
+	sudo setcap cap_sys_rawio=ep $@
 
 $(SRC).par.c:  $(SRC).c 
 	$(PLC) $(SRC).c --tile --parallel $(TILEFLAGS) $(PLCFLAGS)  -o $@
+	sudo setcap cap_sys_rawio=ep $@
 
 orig: $(SRC).c papi_defs.h perf_interface
 	$(CC) $(OPT_FLAGS) $(INC_FLAGS) $(CFLAGS) $(SRC).c -o $@ $(LDFLAGS)
-	#sudo setcap cap_sys_rawio=ep $@
+	sudo setcap cap_sys_rawio=ep $@
 
 orig_par: $(SRC).c papi_defs.h perf_interface
 	$(CC) $(OPT_FLAGS) $(INC_FLAGS) $(CFLAGS) $(PAR_FLAGS) $(SRC).c -o $@ $(LDFLAGS)
-	#sudo setcap cap_sys_rawio=ep $@
+	sudo setcap cap_sys_rawio=ep $@
 
 opt: $(SRC).opt.c papi_defs.h perf_interface
 	$(CC) $(OPT_FLAGS) $(CFLAGS) $(SRC).opt.c -o $@ $(LDFLAGS)
-	#sudo setcap cap_sys_rawio=ep $@
+	sudo setcap cap_sys_rawio=ep $@
 
 tiled: $(SRC).tiled.c papi_defs.h perf_interface
 	$(CC) $(OPT_FLAGS) $(INC_FLAGS) $(CFLAGS) $(SRC).tiled.c -o $@ $(LDFLAGS)
-	#sudo setcap cap_sys_rawio=ep $@
+	sudo setcap cap_sys_rawio=ep $@
 
 par: $(SRC).par.c papi_defs.h perf_interface
 	$(CC) $(OPT_FLAGS) $(INC_FLAGS) $(CFLAGS) $(OMP_FLAGS) $(SRC).par.c -o $@  $(LDFLAGS)
-	#sudo setcap cap_sys_rawio=ep $@
+	sudo setcap cap_sys_rawio=ep $@
 
 perf_interface: $(PAPI_INTERFACE)/papi_interface.h $(PAPI_INTERFACE)/papi_interface.c
 	make -C $(PAPI_INTERFACE) libpapi_interface.a

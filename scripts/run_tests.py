@@ -20,8 +20,8 @@ base         = "../benchmarks/"
 dbname       = "NONAME"
 mic_run_data = " total0 REAL, total1 REAL, pcie REAL, EXEC_TIME REAL"
 cpu_run_data = ""
-
 conn = ""
+run_on = "cpu"
 
 #Not from config file:
 bench_list = ["adi", "lu", "matmul", "jacobi-1d-imper", "jacobi-2d-imper"]  
@@ -72,6 +72,51 @@ def insert_mic_run_info(kernel_config_id , output_file_path):
  #quit()
  return  
 
+
+
+def insert_cpu_run_info(kernel_config_id , output_file_path):
+ print "inserting cpu run "
+ #open the file and read last two lines 
+ output = open (output_file_path, "r")
+ lines  = output.readlines()
+ keys   = lines[-2].strip().split("\t")
+ values = lines[-1].strip().split("\t")
+ output.close()
+
+ print " keys: "
+ print keys
+ print " values: "
+ print values
+
+ # insert_query = "insert into  kernel_config values  (\"" + kernel_name + "\"," + str(sizez[0]) + "," + size_m + "," + size_k + ")"
+ #INSERT INTO table_name (column1,column2,column3,...)
+ # VALUES (value1,value2,value3,...);
+ col_names = "("
+ col_values= "("
+
+ for key_val in zip(keys, values):
+  col_names = col_names + str(key_val[0]) + ","
+  col_values= col_values+ str(key_val[1]) + ","
+ 
+ col_names  = col_names  + "kernel_config_id)" 
+ col_values = col_values + str(kernel_config_id) + ")"
+
+ insert = "INSERT INTO  cpu_run " + col_names + " values " + col_values + ";"
+ print insert
+
+ import re
+ #Need to replace all the "::" with an underscrores.  
+ insert = re.sub('::*', "_" ,insert)
+ #Need to replace all the "(J)" with empty spaces:
+ insert = insert.replace('(J)', "" )
+ print "After removing all the colons we get:"
+ print insert
+
+ cur = conn.cursor()
+ cur.execute(insert)
+ conn.commit()
+ return  
+
 def insert_kernel_config(kernel_name, sizez):
   size_m = "-1"
   size_k = "-1"
@@ -119,8 +164,8 @@ def create_db():
 
  dbpath = "./" + dbname + ".db"
  if os.path.exists(dbpath):
-   print "database existed, deleting !"
-   os.remove(dbpath)
+   print "database exists  !"
+   #os.remove(dbpath)
  
  #Create a connection and create the database
  create_query = ""
@@ -132,6 +177,8 @@ def create_db():
                   "size_n  INTEGER, size_m  INTEGER, size_k  INTEGER);\n"
    conn.execute(create_query)
    conn.commit()
+ else:
+   print "kernel_config already exists"
 
  if (not table_exists(conn, "mic_run")):
    print "Will create mic_run"
@@ -139,16 +186,20 @@ def create_db():
               "kernel_config_id INTEGER, FOREIGN KEY(kernel_config_id) REFERENCES kernel_config(ROWID));\n"
    conn.execute(create_query)
    conn.commit()
+ else:
+   print "mic_rn already exists"
 
  if (not table_exists(conn, "cpu_run")):
-   print "Will create cou_run"
+   print "Will create cpu_run"
    create_query  = "create table cpu_run  (" + cpu_run_data + "," \
               "kernel_config_id INTEGER, FOREIGN KEY(kernel_config_id) REFERENCES kernel_config(ROWID));\n"
+   print "Will execute: " + create_query
    conn.execute(create_query)
    conn.commit()
+ else: 
+  print "cpu run alredy exists"
 
 
- print " hererererere "
  return conn
 
 def read_config(): 
@@ -161,13 +212,21 @@ def read_config():
   global dbname
   global mic_run_data
   global cpu_run_data
-
+  global run_on
 
   PAPI_LIB   = "PAPI_LIB=" + config.get("LIBS", "PAPI_LIB")
   POLYCC_LIB = "PLC="      + config.get("LIBS", "POLYCC_LIB")
+
   base       = config.get("BEMNCHMARKS", "base")
+  run_on      = config.get("BEMNCHMARKS", "run_on")
+  
+  #if ( not (len(base) == len(run_on))):
+  #  print "error, bases abd run_on dont have same length"
+  #  quit()
+
   dbname     = config.get("DATA_BASE", "dbname")
   mic_run_data  = config.get("DATA_BASE","mic_run_data")
+  cpu_run_data  = config.get("DATA_BASE" , "cpu_run_data")
 
   print PAPI_LIB 
   print POLYCC_LIB
@@ -195,11 +254,10 @@ def test_all_versions(to_compose, tokens, text, bench, std_err, std_out):
     #Now make perf    
     print "now making: " + str(e) + " for benchmark " + bench
     try:
-      print subprocess.check_call(["make", "-C", base + bench, "perf", PAPI_LIB, POLYCC_LIB], stderr=std_err, stdout=std_out)
+      subprocess.check_call(["make", "-C", base + bench, "perf", PAPI_LIB, POLYCC_LIB], stderr=std_err, stdout=std_out)
     except ValueError:
       print "Error compiling " + bench + " sizes: " + str(e)
       print ValueError
-      #quit()
 
 
     #Now run each varient of the benchmark separetly, wait 10 escs between each run !
@@ -212,7 +270,12 @@ def test_all_versions(to_compose, tokens, text, bench, std_err, std_out):
         try:
           print "Now executing " + exe_file + " for the " + str(i) + " time "
           subprocess.check_call([exe_file], stderr=std_err, stdout=std_out)
-          insert_mic_run_info(kernel_config_id, output_file_path)
+
+          if (run_on == "mic"):
+            insert_mic_run_info(kernel_config_id, output_file_path)
+          if (run_on == "cpu"):
+            insert_cpu_run_info(kernel_config_id, output_file_path)
+
           print "now sleeping !"
           time.sleep(3)
         except IOError as err:
@@ -285,7 +348,6 @@ def main():
   global conn
   read_config()
   conn = create_db()
-  quit()
   clean_results()
   run_tests()
  
