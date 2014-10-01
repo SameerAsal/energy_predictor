@@ -13,10 +13,13 @@
 #endif 
 
 
-#pragma declarations
+//#pragma declarations
 double a[N][N];
 double b[N][N];
-#pragma enddeclarations
+//#pragma enddeclarations
+
+__attribute__ ((target(mic))) double a[N][N];
+__attribute__ ((target(mic))) double b[N][N];
 
 #include "util.h"
 
@@ -32,7 +35,10 @@ int main(int argc, char** argv)
 #ifdef PERFCTR
   PERF_INIT();
 #endif 
-#pragma scop
+
+#pragma ofload target(mic) inout(a,b)
+{
+  #pragma scop
     for (t=0; t<T; t++) {
         for (i=2; i<N-1; i++) {
             for (j=2; j<N-1; j++) {
@@ -45,7 +51,8 @@ int main(int argc, char** argv)
             }
         }
     }
-#pragma endscop
+  #pragma endscop
+}
 
 #ifdef PERFCTR
   PERF_EXIT(argv[0]);
