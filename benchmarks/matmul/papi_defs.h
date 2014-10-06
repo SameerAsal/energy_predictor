@@ -1,6 +1,6 @@
 #ifdef PERFCTR
 void PERF_INIT() { 
-  init_counters();  
+  init_counters("../interface.cfg");  
   start_counting();
 }
 

@@ -13,3 +13,4 @@ mic_benchmarks/*/*.*c
 benchmarks/*/*.*c
 poly_predictor_runs_safe.db
 rodinia_benchmarks/
+*.db
