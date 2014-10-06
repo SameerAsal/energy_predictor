@@ -36,7 +36,7 @@ int main(int argc, char** argv)
   PERF_INIT();
 #endif 
 
-#pragma ofload target(mic) inout(a,b)
+#pragma offload target(mic) inout(a,b)
 {
   #pragma scop
     for (t=0; t<T; t++) {

@@ -179,6 +179,7 @@ void print_counters() {
 
   if (mic_access_sdk_enabled) {
     // Print out all the numbers, add the headers first !
+    printf("%f\t%f\t%f\t", mic_total0_energy, mic_total1_energy, mic_pcie_energy);
   }
 #endif
 
@@ -360,23 +361,83 @@ BOOL find_cmp(char *cmp_name, int* cmp_id) {
   return FALSE;
 }
 
-void read_config() {
-  // Supposedly reading some hypotheitcal config file that will hopefully 
-  // set the values for settings for an illusion of organized code.
-  rapl_enabled    = TRUE; 
-  cpu_enabled     = TRUE;
+void read_config(char* conf_path) {
 
-#ifdef DISABLE_MIC
-  mic_enabled     = FALSE; 
-  mic_access_sdk_enabled = FALSE;
-#endif 
+  rapl_enabled=FALSE;
+  cpu_enabled=FALSE;
+  mic_enabled=FALSE;
+  mic_access_sdk_enabled=FALSE;
+
+  FILE* conf = NULL;
+  conf = fopen (conf_path, "r");
+
+  if (conf != NULL) {
+    char *line = (char*)( malloc(2*256*sizeof(char) ) );
+    char *tok;
+    char key[128];
+    char val[128];
+    BOOL bool_val = FALSE;
+    ssize_t read;
+    size_t  len = 0;
+
+    while ((read = getline(&line, &len, conf)) != -1 ) {
+  
+      tok = strstr(line, "=");
+      if (tok == NULL) { 
+        break;
+        printf (" No = found \n");
+      }
+
+      strcpy (val, tok + 1); 
+      size_t sz =  strlen(line) - strlen(tok);
+      memcpy(key, line, sz);
+      key[sz] = 0;
+     //  printf ("Key:%s\n", key);
+
+      if (strcmp(val, "TRUE\n") == 0) { 
+        bool_val = TRUE;
+        printf ("bool val is true \n");
+      } else { 
+        bool_val = FALSE;
+      } 
+
+      if (strcmp(key, "rapl_enabled") == 0) {
+        rapl_enabled = bool_val;
+        if (rapl_enabled)        
+          printf ("rapl enabled !\n");
+        else
+           printf("rapl disabled \n");
+      } else if ( strcmp(key, "cpu_enabled") == 0) {
+        cpu_enabled = bool_val; 
+        if (cpu_enabled)
+          printf ("cpu enabled !\n");
+      }
+
+      #ifndef DISABLE_MIC
+       else if (strcmp(key,  "mic_enabled") == 0) {
+        mic_enabled = bool_val;
+        if (mic_enabled)
+          printf ("mic enanled !\n");
+      } else if (strcmp(key, "mic_access_sdk_enabled") == 0) {
+        mic_access_sdk_enabled = bool_val;
+        if (mic_access_sdk_enabled)
+          printf ("MicAccessSDK enabled !\n");
+      }
+      #endif 
+    }
+
+    fclose(conf);
+    free(line);
+  } else { 
+     fprintf (stderr, " can't open config file \n"); 
+     exit(0);
+  }
 }
 
 // Initialize everything
 void init_counters() {
 
   printf("Inside init_counters()\n");
-  read_config();
   init_library();
   if (rapl_enabled) {
     init_rapl_counters();
@@ -392,6 +453,7 @@ void init_counters() {
   }
 
   if (mic_access_sdk_enabled) {
+    printf("before init mic sdk \n");
     init_mic_access_sdk_counters();
   }
 #endif
@@ -445,7 +507,8 @@ void stop_counting() {
   total_usec = end_usec - start_usec;
 }
 
-void test() {    
+void test(char* config_path) {
+  read_config(config_path);
   init_counters();
   start_counting();
   test_papi(); 
@@ -511,9 +574,14 @@ void get_time(char* now) {
 }
 
 #ifdef TEST 
-int main() {
-  read_config();
-  test();
+int main(int argc, char** args) {
+  
+//  char* conf_path; // Path to config file.
+  if (argc < 2) {
+    printf ("Please pass path for config file \n");
+    return -1;
+  }
+  test(args[1]);
   return 0;
 }
 #endif
