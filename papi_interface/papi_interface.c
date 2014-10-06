@@ -435,9 +435,9 @@ void read_config(char* conf_path) {
 }
 
 // Initialize everything
-void init_counters() {
+void init_counters(char* file_path) {
 
-  printf("Inside init_counters()\n");
+  read_config(file_path); 
   init_library();
   if (rapl_enabled) {
     init_rapl_counters();
@@ -508,8 +508,7 @@ void stop_counting() {
 }
 
 void test(char* config_path) {
-  read_config(config_path);
-  init_counters();
+  init_counters(config_path);
   start_counting();
   test_papi(); 
   stop_counting();

@@ -27,7 +27,8 @@ OPT_FLAGS :=-O3 -fp-model precise -xavx
 PAR_FLAGS := -parallel
 OMP_FLAGS := -openmp
 
-CFLAGS+=-DTIME -O3 -xhost -opt-report-phase=offload
+#CFLAGS+=-DTIME -O3 -xhost -opt-report-phase=offload
+CFLAGS+=-DTIME -O3 -opt-report-phase=offload
 
 #MicAccessSdk related includes and libraries. 
 MIC_INC=-I/usr/include/CommonMic -I/usr/include/API/public
