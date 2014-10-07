@@ -30,7 +30,7 @@ int main(int argc, char** argv)
     IF_TIME(t_start = rtclock());
 
 #ifdef PERFCTR
-  PERF_INIT();
+  PERF_INIT(%PAPI_INTERFACE_CONF%);
 #endif 
 #pragma scop
     for (t=0; t<T; t++) {

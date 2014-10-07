@@ -4,7 +4,14 @@ MIC_INC=-I/usr/include/CommonMic -I/usr/include/API/public
 MIC_LIB=-L/usr/lib64/  -lMicAccessSDK -lscif -lODMDebug -lpthread
 
 FLAGS=-DDISABLE_MIC
-CC=icc
+
+ERR = $(shell which icc >/dev/null; echo $$?)
+ifeq "$(ERR)" "0"
+    CC = icc
+else
+    CC = gcc
+endif
+
 
 all: libpapi_interface.a test
 nomic_all: libpapi_interface_nomic test_nomic

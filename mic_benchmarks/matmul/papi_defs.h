@@ -1,6 +1,6 @@
 #ifdef PERFCTR
-void PERF_INIT() { 
-  init_counters("../interface.cfg");  
+void PERF_INIT(char* papi_interface_conf) { 
+  init_counters(papi_interface_conf);  
   start_counting();
 }
 

@@ -372,7 +372,7 @@ void read_config(char* conf_path) {
   conf = fopen (conf_path, "r");
 
   if (conf != NULL) {
-    char *line = (char*)( malloc(2*256*sizeof(char) ) );
+    char *line = (char*)( malloc(2*256*sizeof(char)));
     char *tok;
     char key[128];
     char val[128];
@@ -383,7 +383,7 @@ void read_config(char* conf_path) {
     while ((read = getline(&line, &len, conf)) != -1 ) {
   
       tok = strstr(line, "=");
-      if (tok == NULL) { 
+      if (tok == NULL) {
         break;
         printf (" No = found \n");
       }
@@ -392,7 +392,7 @@ void read_config(char* conf_path) {
       size_t sz =  strlen(line) - strlen(tok);
       memcpy(key, line, sz);
       key[sz] = 0;
-     //  printf ("Key:%s\n", key);
+      //printf("Key:%s\n", key);
 
       if (strcmp(val, "TRUE\n") == 0) { 
         bool_val = TRUE;
@@ -407,10 +407,12 @@ void read_config(char* conf_path) {
           printf ("rapl enabled !\n");
         else
            printf("rapl disabled \n");
-      } else if ( strcmp(key, "cpu_enabled") == 0) {
+      } else if (strcmp(key, "cpu_enabled") == 0) {
         cpu_enabled = bool_val; 
         if (cpu_enabled)
           printf ("cpu enabled !\n");
+        else
+          printf ("cpu disabled !\n");
       }
 
       #ifndef DISABLE_MIC

@@ -46,7 +46,7 @@ int main(int argc, char** argv)
 #endif
 
 #ifdef PERFCTR
-    PERF_INIT(); 
+  PERF_INIT(%PAPI_INTERFACE_CONF%);
 #endif
 #pragma ofload target(mic) inout(X,A,B)
 {

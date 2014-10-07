@@ -16,9 +16,9 @@ int main()
 
     init_array() ;
 
-#ifdef PERFCTR
-    PERF_INIT; 
-#endif
+  #ifdef PERFCTR
+  PERF_INIT(%PAPI_INTERFACE_CONF%);
+  #endif
 
     IF_TIME(t_start = rtclock());
 

@@ -40,9 +40,9 @@ int main(int argc, char** argv)
 //    reset_count_registers(); 
 #endif
 
-#ifdef PERFCTR
-    PERF_INIT(); 
-#endif
+  #ifdef PERFCTR
+  PERF_INIT(%PAPI_INTERFACE_CONF%);
+  #endif
 
 #pragma scop
     for (t = 0; t < T; t++) {

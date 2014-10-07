@@ -22,22 +22,26 @@ mic_run_data = " total0 REAL, total1 REAL, pcie REAL, EXEC_TIME REAL"
 cpu_run_data = ""
 conn = ""
 run_on = "cpu"
+papi_interface_conf = ""
 
 #Not from config file:
 bench_list = ["adi", "lu", "matmul", "jacobi-1d-imper", "jacobi-2d-imper"]  
 tokens     = [ "%N_VAL%", "%M_VAL%", "%K_VAL%"]
-varients   = ["orig_par",\
+varients   = ["par", \
+              "orig_par",\
               "orig",\
-              "par",\
               "tiled"]
 
 data_files=["orig_par_timings.txt",\
-            "orig_timings.txt", \
+           "orig_timings.txt", \
             "par_timings.txt",\
             "tiled_timings.txt" ]
 
+thread_sizes_mic = [2, 4 , 8 , 10, 12, 24, 32, 36, 40, 80, 100, 128, 160, 180, 200, 220 ]
+thread_sizes_cpu = [2, 4 , 8 , 10, 12, 24]
+
 # Dictionary of key value data followed by 
-def insert_mic_run_info(kernel_config_id , output_file_path):
+def insert_mic_run_info(kernel_config_id , output_file_path, num_threads):
  #open the file and read last two lines 
  output = open(output_file_path, "r")
  lines  = output.readlines()
@@ -59,6 +63,9 @@ def insert_mic_run_info(kernel_config_id , output_file_path):
   col_names = col_names + str(key_val[0]) + ","
   col_values= col_values+ str(key_val[1]) + ","
  
+ col_name   = col_names + "num_threads,"
+ col_values = col_values + str(num_threads) + ","
+ 
  col_names  = col_names  + "kernel_config_id)" 
  col_values = col_values + str(kernel_config_id) + ")"
 
@@ -74,47 +81,61 @@ def insert_mic_run_info(kernel_config_id , output_file_path):
 
 
 
-def insert_cpu_run_info(kernel_config_id , output_file_path):
+def insert_cpu_run_info(kernel_config_id , output_file_path, num_threads):
  print "inserting cpu run "
  #open the file and read last two lines 
- output = open (output_file_path, "r")
- lines  = output.readlines()
- keys   = lines[-2].strip().split("\t")
- values = lines[-1].strip().split("\t")
- output.close()
+ try:
+   output = open (output_file_path, "r")
+   lines  = output.readlines()
+   keys   = lines[-2].strip().split("\t")
+   values = lines[-1].strip().split("\t")
+   output.close()
+   print "error happened "
 
- print " keys: "
- print keys
- print " values: "
- print values
+   print " keys: "
+   print keys
+   print " values: "
+   print values
+  
+   # insert_query = "insert into  kernel_config values  (\"" + kernel_name + "\"," + str(sizez[0]) + "," + size_m + "," + size_k + ")"
+   #INSERT INTO table_name (column1,column2,column3,...)
+   # VALUES (value1,value2,value3,...);
+   col_names = "("
+   col_values= "("
+  
+   for key_val in zip(keys, values):
+    col_names = col_names + str(key_val[0]) + ","
+    col_values= col_values+ str(key_val[1]) + ","
+  
+   print "adding number of threads" 
+   col_names   = col_names  + "num_threads,"
+   col_values  = col_values + str(num_threads) + ","
 
- # insert_query = "insert into  kernel_config values  (\"" + kernel_name + "\"," + str(sizez[0]) + "," + size_m + "," + size_k + ")"
- #INSERT INTO table_name (column1,column2,column3,...)
- # VALUES (value1,value2,value3,...);
- col_names = "("
- col_values= "("
+   col_names  = col_names  + "kernel_config_id)" 
+   col_values = col_values + str(kernel_config_id) + ")"
+  
+   print "column names : " + col_names
+   print "column values: " + col_values
 
- for key_val in zip(keys, values):
-  col_names = col_names + str(key_val[0]) + ","
-  col_values= col_values+ str(key_val[1]) + ","
+   insert = "INSERT INTO  cpu_run " + col_names + " values " + col_values + ";"
+   print insert
+   import re
+   #Need to replace all the "::" with an underscrores.  
+   insert = re.sub('::*', "_" ,insert)
+   #Need to replace all the "(J)" with empty spaces:
+   insert = insert.replace('(J)', "" )
+   print "After removing all the colons we get:"
+   print insert
+  
+   cur = conn.cursor()
+   cur.execute(insert)
+   conn.commit()
+ except ValueError as err:
+   print "error in insert cpu run" + str(err)
+   quit()
+   return
  
- col_names  = col_names  + "kernel_config_id)" 
- col_values = col_values + str(kernel_config_id) + ")"
-
- insert = "INSERT INTO  cpu_run " + col_names + " values " + col_values + ";"
- print insert
-
- import re
- #Need to replace all the "::" with an underscrores.  
- insert = re.sub('::*', "_" ,insert)
- #Need to replace all the "(J)" with empty spaces:
- insert = insert.replace('(J)', "" )
- print "After removing all the colons we get:"
- print insert
-
- cur = conn.cursor()
- cur.execute(insert)
- conn.commit()
+ print "retirnining from insert cpu run safely"
  return  
 
 def insert_kernel_config(kernel_name, sizez):
@@ -183,7 +204,7 @@ def create_db():
  if (not table_exists(conn, "mic_run")):
    print "Will create mic_run"
    create_query  = "create table mic_run  (" + mic_run_data + "," \
-              "kernel_config_id INTEGER, FOREIGN KEY(kernel_config_id) REFERENCES kernel_config(ROWID));\n"
+              "num_threads INTEGER, kernel_config_id INTEGER, FOREIGN KEY(kernel_config_id) REFERENCES kernel_config(ROWID));\n"
    conn.execute(create_query)
    conn.commit()
  else:
@@ -192,7 +213,7 @@ def create_db():
  if (not table_exists(conn, "cpu_run")):
    print "Will create cpu_run"
    create_query  = "create table cpu_run  (" + cpu_run_data + "," \
-              "kernel_config_id INTEGER, FOREIGN KEY(kernel_config_id) REFERENCES kernel_config(ROWID));\n"
+              "num_threads INTEGER, kernel_config_id INTEGER, FOREIGN KEY(kernel_config_id) REFERENCES kernel_config(ROWID));\n"
    print "Will execute: " + create_query
    conn.execute(create_query)
    conn.commit()
@@ -213,20 +234,23 @@ def read_config():
   global mic_run_data
   global cpu_run_data
   global run_on
+  global papi_interface_conf
 
   PAPI_LIB   = "PAPI_LIB=" + config.get("LIBS", "PAPI_LIB")
   POLYCC_LIB = "PLC="      + config.get("LIBS", "POLYCC_LIB")
 
-  base       = config.get("BEMNCHMARKS", "base")
-  run_on      = config.get("BEMNCHMARKS", "run_on")
-  
+  base        = config.get("BENCHMARKS", "base")
+  run_on      = config.get("BENCHMARKS", "run_on")
+  papi_interface_conf = config.get("BENCHMARKS","papi_interface_conf")
+
+
   #if ( not (len(base) == len(run_on))):
   #  print "error, bases abd run_on dont have same length"
   #  quit()
 
-  dbname     = config.get("DATA_BASE", "dbname")
+  dbname        = config.get("DATA_BASE", "dbname")
   mic_run_data  = config.get("DATA_BASE","mic_run_data")
-  cpu_run_data  = config.get("DATA_BASE" , "cpu_run_data")
+  cpu_run_data  = config.get("DATA_BASE", "cpu_run_data")
 
   print PAPI_LIB 
   print POLYCC_LIB
@@ -259,22 +283,39 @@ def test_all_versions(to_compose, tokens, text, bench, std_err, std_out):
       print "Error compiling " + bench + " sizes: " + str(e)
       print ValueError
 
-
+    print "Make finished" 
     #Now run each varient of the benchmark separetly, wait 10 escs between each run !
     for exe in varients:
       kernel_config_id  = insert_kernel_config(bench + "_" + exe, e)
       exe_file          = base + bench + "/" + exe
       output_file_path  = exe_file + "_timings" + ".txt"
+      thread_sizes = []
+
+      if ("par" in exe):
+        if (run_on == "mic"):
+          thread_sizes = thread_sizes_mic
+        else:
+          thread_sizes = thread_sizes_cpu
+      else:
+        thread_sizes = [1]
+
       #Run each 3 times
       for i in range(0,3):
+       for num_thread in thread_sizes:
         try:
+          if ("par" in exe):
+            os.environ['OMP_NUM_THREADS'] =  str(num_thread)
+            if (run_on == "mic"):
+              os.environ["OFFLOAD_REPORT"] = "3"
+  
+
           print "Now executing " + exe_file + " for the " + str(i) + " time "
-          subprocess.check_call([exe_file], stderr=std_err, stdout=std_out)
+          subprocess.check_call([exe_file], stderr=std_err, stdout=std_out, env=os.environ)
 
           if (run_on == "mic"):
-            insert_mic_run_info(kernel_config_id, output_file_path)
+            insert_mic_run_info(kernel_config_id, output_file_path, num_thread)
           if (run_on == "cpu"):
-            insert_cpu_run_info(kernel_config_id, output_file_path)
+            insert_cpu_run_info(kernel_config_id, output_file_path, num_thread)
 
           print "now sleeping !"
           time.sleep(3)
@@ -315,8 +356,10 @@ def run_tests():
     template   = open(name, 'r')
     text       = template.read()
     template.close()
+    text = text.replace("%PAPI_INTERFACE_CONF%", "\"" +  papi_interface_conf + "\"");
+ 
     print "wrote " + name
-
+     
     if not(-1 == text.find(tokens[0])):
       print bench + " " + tokens[0]
       to_compose.append(n_Values)

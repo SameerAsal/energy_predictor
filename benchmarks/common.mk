@@ -59,34 +59,34 @@ all: orig tiled par
 
 $(SRC).opt.c:  $(SRC).c
 	$(PLC) $(SRC).c $(INC_FLAGS) $(PLCFLAGS)  -o $@
-	sudo setcap cap_sys_rawio=ep $@
+	#sudo setcap cap_sys_rawio=ep $@
 $(SRC).tiled.c:  $(SRC).c
 	$(PLC) $(SRC).c --tile $(TILEFLAGS) $(PLCFLAGS)  -o $@
-	sudo setcap cap_sys_rawio=ep $@
+	#sudo setcap cap_sys_rawio=ep $@
 
 $(SRC).par.c:  $(SRC).c 
 	$(PLC) $(SRC).c --tile --parallel $(TILEFLAGS) $(PLCFLAGS)  -o $@
-	sudo setcap cap_sys_rawio=ep $@
+	#sudo setcap cap_sys_rawio=ep $@
 
 orig: $(SRC).c papi_defs.h perf_interface
-	$(CC) $(OPT_FLAGS) $(INC_FLAGS) $(CFLAGS) $(SRC).c -o $@ $(LDFLAGS)
-	sudo setcap cap_sys_rawio=ep $@
+	$(CC) $(OPT_FLAGS) $(INC_FLAGS) $(CFLAGS) $(PAR_FLAGS) $(SRC).c -o $@ $(LDFLAGS)
+	#sudo setcap cap_sys_rawio=ep $@
 
 orig_par: $(SRC).c papi_defs.h perf_interface
 	$(CC) $(OPT_FLAGS) $(INC_FLAGS) $(CFLAGS) $(PAR_FLAGS) $(SRC).c -o $@ $(LDFLAGS)
-	sudo setcap cap_sys_rawio=ep $@
+	#sudo setcap cap_sys_rawio=ep $@
 
 opt: $(SRC).opt.c papi_defs.h perf_interface
 	$(CC) $(OPT_FLAGS) $(CFLAGS) $(SRC).opt.c -o $@ $(LDFLAGS)
-	sudo setcap cap_sys_rawio=ep $@
+	#sudo setcap cap_sys_rawio=ep $@
 
 tiled: $(SRC).tiled.c papi_defs.h perf_interface
-	$(CC) $(OPT_FLAGS) $(INC_FLAGS) $(CFLAGS) $(SRC).tiled.c -o $@ $(LDFLAGS)
-	sudo setcap cap_sys_rawio=ep $@
+	$(CC) $(OPT_FLAGS) $(INC_FLAGS) $(CFLAGS) $(PAR_FLAGS) $(SRC).tiled.c -o $@ $(LDFLAGS)
+	#sudo setcap cap_sys_rawio=ep $@
 
 par: $(SRC).par.c papi_defs.h perf_interface
 	$(CC) $(OPT_FLAGS) $(INC_FLAGS) $(CFLAGS) $(OMP_FLAGS) $(SRC).par.c -o $@  $(LDFLAGS)
-	sudo setcap cap_sys_rawio=ep $@
+	#sudo setcap cap_sys_rawio=ep $@
 
 perf_interface: $(PAPI_INTERFACE)/papi_interface.h $(PAPI_INTERFACE)/papi_interface.c
 	make -C $(PAPI_INTERFACE) libpapi_interface.a

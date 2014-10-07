@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <omp.h>
 #include <stdlib.h>
 #include <math.h>
 #include <assert.h>
@@ -35,7 +36,7 @@ int main(int argc, char** argv) {
   char size_string[100];
 
   #ifdef PERFCTR
-  PERF_INIT(); 
+  PERF_INIT(%PAPI_INTERFACE_CONF%);
   #endif
 
   IF_TIME(t_start = rtclock());
@@ -43,6 +44,13 @@ int main(int argc, char** argv) {
   #ifdef PERFCTR
   // reset_count_registers(); 
   #endif
+
+  #pragma omp parallel
+  {
+     printf("number of threads: %i\n", omp_get_num_threads());
+  }
+
+
 
   #pragma scop
     for(i=0; i<M; i++)
