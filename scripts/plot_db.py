@@ -7,6 +7,7 @@ import datetime
 import sqlite3
 import ConfigParser
 import os
+import pdb
 
 # Ploting the graphs for the data I am getting.
 # for data picked up from the mic runs, pic the ones with the smallest energy/time among all the threads  and compare oit to the
@@ -50,25 +51,31 @@ import os
 
 
 class Plotter:
-  create_view_agg = '''
-                    Drop view if exists mic_run_agg; 
+  create_view_agg ='''Drop view if exists mic_run_agg; 
                     CREATE VIEW if not exists mic_run_agg AS select 
-                    num_threads, kernel_config_id, avg(exec_time) as avg_exec_time, min(exec_time) as min_exec_time, max(exec_time) as max_exec_time, 
-                    avg(total0) as avg_total0 , max(total0) as max_total0, min(total0) as min_total0 
+                    num_threads AS num_threads, 
+                    kernel_config_id AS kernel_config_id,
+                    avg(exec_time)   AS avg_exec_time, min(exec_time) AS min_exec_time, max(exec_time) AS max_exec_time,
+                    avg(total0)      AS avg_total0,       max(total0) AS max_total0,       min(total0) AS min_total0,
+
+                    (max(total0)    - min(total0))/avg(total0)        AS relative_err_energy,
+                    (max(exec_time) - min(exec_time))/avg(exec_time)  AS relative_err_exec_time
+
                     FROM mic_run 
                     group by mic_run.kernel_config_id, mic_run.num_threads;'''
 
   create_view_accepted = """ Drop view if exists mic_run_agg_accepted; 
                             CREATE VIEW if not exists mic_run_agg_accepted AS select 
-                            (max_total0 - min_total0)/(avg_total0) AS relative_err,avg_total0 AS avg_total0, avg_exec_time AS avg_exec_time
-                             ,num_threads AS num_threads, kernel_config_id AS kernel_config_id  
+                            num_threads      AS num_threads, 
+                            kernel_config_id AS kernel_config_id, 
+                            avg_total0       AS avg_total0, 
+                            avg_exec_time    AS avg_exec_time,
+                            relative_err_energy    AS relative_err_energy,
+                            relative_err_exec_time AS relative_err_exec_time
                             from mic_run_agg where kernel_config_id in 
-                            (select rowid from kernel_config where kernel_name like \"%par%\" AND not kernel_name like \"%orig%\") 
-                            AND (max_total0 - min_total0)/(avg_total0) < 0.1 AND avg_exec_time >  1000; """
-
-#  select_kernel_names = """ select distinct kernel_name from kernel_config where rowid in     
-#                            (select kernel_config_id  from mic_run_agg_accepted where kernel_config_id in  
-#                            (select rowid from kernel_config)); """ 
+                            (select rowid from kernel_config where kernel_name like \"%par%\" AND not kernel_name like \"%orig%\")
+                            AND relative_err_energy < 0.1 AND relative_err_exec_time < 0.1 """
+                            ##AND avg_exec_time >  1000; """
 
   select_kernel_names   = """ select distinct kernel_name from kernel_config, mic_run_agg_accepted 
                              where mic_run_agg_accepted.kernel_config_id = kernel_config.rowid """
@@ -76,16 +83,41 @@ class Plotter:
   select_kernel_ids      = """ select distinct kernel_config.rowid  from kernel_config, mic_run_agg_accepted 
                              where mic_run_agg_accepted.kernel_config_id = kernel_config.rowid """
 
-  select_kernel_run_data= """select  kernel_config.rowid, kernel_name, size_n, size_m, size_k, 
+  select_kernels_run_data= """select  kernel_config.rowid, kernel_name, size_n, size_m, size_k, 
                              mic_run_agg_accepted.num_threads,mic_run_agg_accepted.avg_exec_time , mic_run_agg_accepted.avg_total0  
                              from kernel_config, mic_run_agg_accepted 
-                             where mic_run_agg_accepted.kernel_config_id = kernel_config.rowid""" 
-                             #AND where kernel_config.rowid = KER_ID"""
-                             #group by kernel_config.rowid"""
+                             where mic_run_agg_accepted.kernel_config_id = kernel_config.rowid"""                         
+                             
+
+  select_kernel_run_data= """select  kernel_config.rowid, kernel_name, size_n, size_m, size_k, 
+                             mic_run_agg_accepted.num_threads,
+                             mic_run_agg_accepted.avg_exec_time, 
+                             mic_run_agg_accepted.avg_total0,
+                             relative_err_energy, 
+                             relative_err_exec_time 
+                             from kernel_config, mic_run_agg_accepted 
+                             where mic_run_agg_accepted.kernel_config_id = kernel_config.rowid 
+                             AND kernel_config.rowid = KER_ID"""
+
+
+                             
 
   def __init__(self, conf):
     config      = ConfigParser.ConfigParser()
     config.read(conf)
+
+    self.threshold_energy_err=config.get("DATA", "energy_err")
+    self.threshold_energy_val=config.get("DATA", "energy_val")
+    self.threshold_time_err  =config.get("DATA", "time_err")
+    self.threshold_time_val  =config.get("DATA", "time_val")
+
+
+    print self.threshold_energy_err
+    print self.threshold_energy_val
+    print self.threshold_time_err  
+    print self.threshold_time_val  
+
+
     self.dbname = "./" + config.get("DATA_BASE", "dbname") + ".db"
     if not os.path.exists(self.dbname):
       err_msg  = "Data base file " + self.dbname + " doesn't exist !"
@@ -107,15 +139,29 @@ class Plotter:
       raise Exception (err_str)
     return
 
+  def plot_kernel_runs(self,runs):    
+    #Plot the runs for threads Vs evergy and time
+    #If any of the runs don't match the criteria (error, exection time). Discard all of the kernel.
+    subplot = plt.subplot(2,1,counter%2 + 1)
+    x_axis = map(lambda item: float(item), runs[:,counter])
+
+
+
   def plot_all(self):
     try:
       #Pick all the kernel names
       accepted_kernel_ids = self.dbconn.execute (Plotter.select_kernel_ids).fetchall()
-      print "Accepted kernel IDs: " 
-      for each t in accepted_kernel_ids:
-        print t[0]
+      for ID in accepted_kernel_ids:
+        select_str = Plotter.select_kernel_run_data.replace("KER_ID", str(ID[0]))
+        results = self.dbconn.execute(select_str).fetchall()
+        ker = results[0][1] + "(" + str(results[0][2]) + "," + str(results[0][3]) + "," + str(results[0][4]) + ")" + " with " + str(len(results)) + " thread runs"
+        if (len(results) > 8):
+          print "Accepted: " + ker 
+          self.plot_kernel_runs(results)
 
-      #for row in self.dbconn.execute (Plotter.select_kernel_run_data):
+        #else:
+          #print "rejected: " + ker 
+      
 
     except Exception as Err:
       err_str = "An eror occurred while trying to read kernel names in plot_all:\n" + str(Err) 
