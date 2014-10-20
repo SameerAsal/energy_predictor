@@ -7,12 +7,9 @@ import sqlite3
 import ConfigParser
 import os
 import pdb
-<<<<<<< HEAD
 import inspect
 from inspect import currentframe, getframeinfo
 
-=======
->>>>>>> 591576e6d7715cfbf0972a4267192e08317d36c6
 
 # Ploting the graphs for the data I am getting.
 # for data picked up from the mic runs, pic the ones with the smallest energy/time among all the threads  and compare oit to the
@@ -89,24 +86,16 @@ class Plotter:
   #                           where mic_run_agg_accepted.kernel_config_id = kernel_config.rowid """
 
 
-<<<<<<< HEAD
   select_kernel_ids      = """ select distinct kernel_config_id from mic_run_agg_accepted"""
 
-=======
->>>>>>> 591576e6d7715cfbf0972a4267192e08317d36c6
   select_kernels_run_data= """select  kernel_config.rowid, kernel_name, size_n, size_m, size_k, 
                              mic_run_agg_accepted.num_threads,mic_run_agg_accepted.avg_exec_time , mic_run_agg_accepted.avg_total0  
                              from kernel_config, mic_run_agg_accepted 
                              where mic_run_agg_accepted.kernel_config_id = kernel_config.rowid"""                         
                              
 
-<<<<<<< HEAD
   select_kernel_run_template= """select  kernel_config.rowid, kernel_name, size_n, size_m, size_k, 
                              mic_run_agg_accepted.num_threads,   
-=======
-  select_kernel_run_data= """select  kernel_config.rowid, kernel_name, size_n, size_m, size_k, 
-                             mic_run_agg_accepted.num_threads,
->>>>>>> 591576e6d7715cfbf0972a4267192e08317d36c6
                              mic_run_agg_accepted.avg_exec_time, 
                              mic_run_agg_accepted.avg_total0,
                              relative_err_energy, 
@@ -126,10 +115,7 @@ class Plotter:
     self.threshold_energy_val=config.get("DATA", "energy_val")
     self.threshold_time_err  =config.get("DATA", "time_err")
     self.threshold_time_val  =config.get("DATA", "time_val")
-<<<<<<< HEAD
     self.output_path         =config.get("OUTPUT", "path")
-=======
->>>>>>> 591576e6d7715cfbf0972a4267192e08317d36c6
 
 
     print self.threshold_energy_err
@@ -159,7 +145,6 @@ class Plotter:
       raise Exception (err_str)
     return
 
-<<<<<<< HEAD
   def plot_kernel_runs(self,runs, ker_name):
     #Plot the runs for threads Vs evergy and time
     threads= map(lambda item: float(item[5]), runs)
@@ -179,22 +164,12 @@ class Plotter:
     savefig(self.output_path + "/" + ker_name + ".png")   
     plt.close()
     return
-=======
-  def plot_kernel_runs(self,runs):    
-    #Plot the runs for threads Vs evergy and time
-    #If any of the runs don't match the criteria (error, exection time). Discard all of the kernel.
-    subplot = plt.subplot(2,1,counter%2 + 1)
-    x_axis = map(lambda item: float(item), runs[:,counter])
-
-
->>>>>>> 591576e6d7715cfbf0972a4267192e08317d36c6
 
   def plot_all(self):
     try:      
       #Pick all the kernel names
       accepted_kernel_ids = self.dbconn.execute (Plotter.select_kernel_ids).fetchall()
       for ID in accepted_kernel_ids:
-<<<<<<< HEAD
         select_str = Plotter.select_kernel_run_template.replace("KER_ID", str(ID[0]))
         results    = self.dbconn.execute(select_str).fetchall()
         ker_name   = results[0][1] + "(" + str(results[0][2]) + "," + str(results[0][3]) + "," + str(results[0][4]) + ")"
@@ -202,19 +177,6 @@ class Plotter:
         if (len(results) > 8):
           print "Accepted: " + msg
           self.plot_kernel_runs(results, ker_name)
-=======
-        select_str = Plotter.select_kernel_run_data.replace("KER_ID", str(ID[0]))
-        results = self.dbconn.execute(select_str).fetchall()
-        ker = results[0][1] + "(" + str(results[0][2]) + "," + str(results[0][3]) + "," + str(results[0][4]) + ")" + " with " + str(len(results)) + " thread runs"
-        if (len(results) > 8):
-          print "Accepted: " + ker 
-          self.plot_kernel_runs(results)
-
-        #else:
-          #print "rejected: " + ker 
-      
-
->>>>>>> 591576e6d7715cfbf0972a4267192e08317d36c6
     except Exception as Err:
       err_str = "An eror occurred while trying to read kernel names in plot_all\n" + str(Err) 
       raise Exception(err_str)
