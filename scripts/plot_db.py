@@ -181,10 +181,6 @@ class Plotter:
       err_str = "An eror occurred while trying to read kernel names in plot_all\n" + str(Err) 
       raise Exception(err_str)
 
-#(kernel Name ,Sizes) --> title
-# Number of threads --> X
-# Energy \ Time consumed --> Y axis.
-
 def main():
   try:
     pp = Plotter("plots.cfg")
