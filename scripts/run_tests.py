@@ -224,7 +224,7 @@ def create_db():
 
 def read_config(): 
   config = ConfigParser.ConfigParser()
-  print "Config file: " + config.read("./runs.cfg")[0] #check which file was opemn, in the return value.
+  print "Config file: " + config.read("../config/runs.cfg")[0] #check which file was opemn, in the return value.
 
   global PAPI_LIB
   global POLYCC_LIB 
@@ -347,8 +347,8 @@ def run_tests():
   to_compose = []
 
   # open to forward output and erro to.
-  std_err = open("./std.err","w")
-  std_out = open("./std.out","w")
+  std_err = open("../output/std.err","w")
+  std_out = open("../output/std.out","w")
   for bench in benchmarks:
     to_compose = []
     name       = base  + bench + "/" + bench + ".template" + ".c"

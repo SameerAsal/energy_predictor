@@ -124,7 +124,7 @@ class Plotter:
     print self.threshold_time_val  
 
 
-    self.dbname = "./" + config.get("DATA_BASE", "dbname") + ".db"
+    self.dbname = config.get("DATA_BASE", "dbname") + ".db"
     if not os.path.exists(self.dbname):
       err_msg  = "Data base file " + self.dbname + " doesn't exist !"
       raise Exception(err_msg)
@@ -183,14 +183,11 @@ class Plotter:
 
 def main():
   try:
-    pp = Plotter("plots.cfg")
+    pp = Plotter("../config/plots.cfg")
     pp.plot_all()
   except Exception as Err:
     print Err
 
-
-
-  
  
 if __name__ == "__main__":
     main()
