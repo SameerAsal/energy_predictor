@@ -63,7 +63,7 @@ def insert_mic_run_info(kernel_config_id , output_file_path, num_threads):
   col_names = col_names + str(key_val[0]) + ","
   col_values= col_values+ str(key_val[1]) + ","
  
- col_name   = col_names + "num_threads,"
+ col_names   = col_names + "num_threads,"
  col_values = col_values + str(num_threads) + ","
  
  col_names  = col_names  + "kernel_config_id)" 
@@ -71,7 +71,6 @@ def insert_mic_run_info(kernel_config_id , output_file_path, num_threads):
 
  insert = "INSERT INTO  mic_run " + col_names + " values " + col_values + ";"
  print insert 
-
  cur = conn.cursor()
  cur.execute(insert)
  conn.commit()
