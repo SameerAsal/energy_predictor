@@ -1,4 +1,4 @@
-energy_predictor
-================
+selective parallelization
+==================
 
-Comparison of different energy consumption for polybench codes on different architectures
+Comparison of different energy consumption for polybench codes on different architectures.
